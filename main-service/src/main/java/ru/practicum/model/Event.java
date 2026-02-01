@@ -42,7 +42,7 @@ public class Event {
     @JoinColumn(name = "initiator_id")
     private User initiator;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
     @JoinColumn(name = "location_id")
     private Location location;
 
@@ -58,7 +58,7 @@ public class Event {
     private Boolean requestModeration;
 
     @Enumerated(EnumType.STRING)
-    @Column(name= "state")
+    @Column(name = "state")
     private EventState state;
 
     @Column(name = "title", length = 120)
