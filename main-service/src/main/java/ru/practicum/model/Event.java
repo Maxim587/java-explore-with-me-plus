@@ -58,7 +58,7 @@ public class Event {
     private Boolean requestModeration;
 
     @Enumerated(EnumType.STRING)
-    @Column(name= "state")
+    @Column(name = "state")
     private EventState state;
 
     @Column(name = "title", length = 120)
