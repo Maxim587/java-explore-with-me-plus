@@ -2,6 +2,7 @@ package ru.practicum.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import ru.practicum.model.ParticipationRequest;
+import ru.practicum.model.ParticipationRequestStatus;
 
 import java.util.Collection;
 import java.util.List;
@@ -15,4 +16,8 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
     List<ParticipationRequest> findAllByIdIn(Collection<Long> ids);
 
     List<ParticipationRequest> findAllByEvent_Id(Long eventId);
+
+    Long countConfirmedRequestsByEventId(Long eventId);
+
+    List<ParticipationRequest> findByEventIdAndStatus(Long eventId, ParticipationRequestStatus requestStatus);
 }

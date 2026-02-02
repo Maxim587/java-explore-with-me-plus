@@ -11,4 +11,13 @@ public interface UserMapper {
     UserDto mapToUserDto(User user);
 
     User mapToUser(NewUserRequest newUser);
+
+    static UserDto toShortDto(User user) {
+        UserDto userDto = new UserDto();
+
+        userDto.setId(user.getId());
+        userDto.setName(user.getName());
+
+        return userDto;
+    }
 }

@@ -25,7 +25,7 @@ public class NewEventDto {
     @NotNull(message = "Значение не должно быть пустым")
     private Location location;
 
-    private Boolean paid;
+    private Boolean paid = false;
 
     private Integer participantLimit;
 

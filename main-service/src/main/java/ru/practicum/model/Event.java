@@ -42,9 +42,11 @@ public class Event {
     @JoinColumn(name = "initiator_id")
     private User initiator;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
-    @JoinColumn(name = "location_id")
-    private Location location;
+    @Column
+    private Double lat;
+
+    @Column
+    private Double lon;
 
     private Boolean paid;
 
