@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public class NewEventDto {
     @NotBlank(message = "Значение не должно быть пустым")
+    @Size(min = 20, max = 2000, message = "Значение должно содержать от 20 до 2000 символов")
     private String annotation;
 
     @NotNull(message = "Значение не должно быть пустым")
@@ -27,7 +28,8 @@ public class NewEventDto {
 
     private Boolean paid = false;
 
-    private Integer participantLimit;
+    @PositiveOrZero(message = "Значение должно быть больше или равно 0")
+    private Integer participantLimit = 0;
 
     private Boolean requestModeration;
 

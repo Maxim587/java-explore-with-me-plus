@@ -18,13 +18,13 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping(path = "/events")
 public class PublicEventController {
-    private EventService eventService;
+    private final EventService eventService;
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto getEvent(@PathVariable("id") Long eventId, HttpServletRequest request) {
+    public EventFullDto getEvent(@PathVariable Long id) {
         log.info("Получение информации о событии");
-        return eventService.getPublicEvent(eventId);
+        return eventService.getPublicEvent(id);
     }
 
     @GetMapping
@@ -39,8 +39,7 @@ public class PublicEventController {
                                              @RequestParam(defaultValue = "false") Boolean onlyAvailable,
                                              @RequestParam(required = false) String sort,
                                              @RequestParam(defaultValue = "0") Integer from,
-                                             @RequestParam(defaultValue = "10") Integer size,
-                                             HttpServletRequest request) {
+                                             @RequestParam(defaultValue = "10") Integer size) {
         log.info("Получение событий публичным эндпоинтом");
         return eventService.searchForUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
     }

@@ -34,7 +34,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         ParticipationRequest request = createParticipationRequest(userId, event);
 
-        if (!event.getRequestModeration()) {
+        if (!event.getRequestModeration() || event.getParticipantLimit() == 0) {
             request.setStatus(ParticipationRequestStatus.CONFIRMED);
             event.setConfirmedRequests(event.getConfirmedRequests() == null ? 1 : event.getConfirmedRequests() + 1);
             eventRepository.save(event);
@@ -57,7 +57,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
                                                          + " для пользователя с id " + userId + " не найден"));
 
         if (request.getStatus() == ParticipationRequestStatus.REJECTED ||
-            request.getStatus() == ParticipationRequestStatus.CANCELLED) {
+            request.getStatus() == ParticipationRequestStatus.CANCELED) {
             throw new ConditionsConflictException("Заявка находится в статусе " + request.getStatus() + ". Отмена заявки невозможна");
         }
 
@@ -67,7 +67,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             eventRepository.save(event);
         }
 
-        request.setStatus(ParticipationRequestStatus.CANCELLED);
+        request.setStatus(ParticipationRequestStatus.CANCELED);
         return mapper.mapToParticipationRequestDto(requestRepository.save(request));
     }
 

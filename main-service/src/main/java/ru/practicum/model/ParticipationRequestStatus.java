@@ -4,5 +4,5 @@ public enum ParticipationRequestStatus {
     PENDING,
     CONFIRMED,
     REJECTED,
-    CANCELLED,
+    CANCELED,
 }

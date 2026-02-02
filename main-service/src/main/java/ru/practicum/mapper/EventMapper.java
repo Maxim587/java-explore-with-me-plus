@@ -8,27 +8,24 @@ import ru.practicum.model.EventState;
 import ru.practicum.model.User;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+
+import static ru.practicum.service.EventServiceImpl.DATE_TIME_FORMATTER;
 
 @UtilityClass
 public class EventMapper {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter
-            .ofPattern("yyyy-MM-dd HH:mm:ss")
-            .withZone(ZoneOffset.UTC);
 
-    public static Event mapToEvent(NewEventDto newEventDto, User user, Category category) {
+    public static Event mapToEvent(NewEventDto newEventDto, User user, Category category, LocalDateTime eventDate) {
         Event event = new Event();
 
         event.setAnnotation(newEventDto.getAnnotation());
         event.setDescription(newEventDto.getDescription());
-        event.setEventDate(LocalDateTime.from(FORMATTER.parse(newEventDto.getEventDate())));
+        event.setEventDate(eventDate);
         event.setCreatedOn(LocalDateTime.now());
         event.setInitiator(user);
         event.setCategory(category);
         event.setConfirmedRequests(0L);
-        event.setLat(newEventDto.getLocation().getLat());
-        event.setLon(newEventDto.getLocation().getLon());
+        event.getLocation().setLat(newEventDto.getLocation().getLat());
+        event.getLocation().setLon(newEventDto.getLocation().getLon());
         event.setPaid(newEventDto.getPaid());
         event.setParticipantLimit(newEventDto.getParticipantLimit());
         event.setRequestModeration(newEventDto.getRequestModeration());
@@ -40,21 +37,21 @@ public class EventMapper {
     }
 
     public static EventFullDto mapToFullDto(Event event) {
-        Location location = new Location(event.getLat(), event.getLon());
+        Location location = new Location(event.getLocation().getLat(), event.getLocation().getLon());
         EventFullDto fullDto = new EventFullDto();
 
         fullDto.setAnnotation(event.getAnnotation());
         fullDto.setCategory(event.getCategory() != null ? CategoryMapper.mapToCategoryDto(event.getCategory()) : null);
         fullDto.setConfirmedRequests(event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L);
-        fullDto.setCreatedOn(FORMATTER.format(event.getCreatedOn()));
+        fullDto.setCreatedOn(DATE_TIME_FORMATTER.format(event.getCreatedOn()));
         fullDto.setDescription(event.getDescription());
-        fullDto.setEventDate(event.getEventDate() != null ? FORMATTER.format(event.getEventDate()) : "");
+        fullDto.setEventDate(event.getEventDate() != null ? DATE_TIME_FORMATTER.format(event.getEventDate()) : "");
         fullDto.setId(event.getId());
         fullDto.setInitiator(UserMapper.toShortDto(event.getInitiator()));
         fullDto.setLocation(location);
         fullDto.setPaid(event.getPaid() != null ? event.getPaid() : false);
         fullDto.setParticipantLimit(event.getParticipantLimit());
-        fullDto.setPublishedOn(event.getPublishedOn() != null ? FORMATTER.format(event.getPublishedOn()) : "");
+        fullDto.setPublishedOn(event.getPublishedOn() != null ? DATE_TIME_FORMATTER.format(event.getPublishedOn()) : "");
         fullDto.setRequestModeration(event.getRequestModeration() != null ? event.getRequestModeration() : true);
         fullDto.setState(event.getState().toString());
         fullDto.setTitle(event.getTitle());
@@ -63,13 +60,13 @@ public class EventMapper {
         return fullDto;
     }
 
-    public EventShortDto mapToShortDto(Event event) {
+    public static EventShortDto mapToShortDto(Event event) {
         EventShortDto shortDto = new EventShortDto();
 
         shortDto.setAnnotation(event.getAnnotation());
         shortDto.setCategory(event.getCategory() != null ? CategoryMapper.mapToCategoryDto(event.getCategory()) : null);
         shortDto.setConfirmedRequests(event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L);
-        shortDto.setEventDate(event.getEventDate() != null ? FORMATTER.format(event.getEventDate()) : "");
+        shortDto.setEventDate(event.getEventDate() != null ? DATE_TIME_FORMATTER.format(event.getEventDate()) : "");
         shortDto.setId(event.getId());
         shortDto.setInitiator(event.getInitiator() != null ? UserMapper.toShortDto(event.getInitiator()) : null);
         shortDto.setPaid(event.getPaid() != null ? event.getPaid() : false);
@@ -88,14 +85,10 @@ public class EventMapper {
             event.setDescription(request.getDescription());
         }
 
-        if (request.getEventDate() != null) {
-            event.setEventDate(LocalDateTime.parse(request.getEventDate()));
-        }
-
         if (request.getLocation() != null && request.getLocation().getLat() != null
-                && request.getLocation().getLon() != null) {
-            event.setLat(request.getLocation().getLat());
-            event.setLon(request.getLocation().getLon());
+            && request.getLocation().getLon() != null) {
+            event.getLocation().setLat(request.getLocation().getLat());
+            event.getLocation().setLon(request.getLocation().getLon());
         }
 
         if (request.getPaid() != null) {
@@ -124,14 +117,10 @@ public class EventMapper {
             event.setDescription(request.getDescription());
         }
 
-        if (request.getEventDate() != null) {
-            event.setEventDate(LocalDateTime.parse(request.getEventDate()));
-        }
-
         if (request.getLocation() != null && request.getLocation().getLat() != null
-                && request.getLocation().getLon() != null) {
-            event.setLat(request.getLocation().getLat());
-            event.setLon(request.getLocation().getLon());
+            && request.getLocation().getLon() != null) {
+            event.getLocation().setLat(request.getLocation().getLat());
+            event.getLocation().setLon(request.getLocation().getLon());
         }
 
         if (request.getPaid() != null) {

@@ -17,8 +17,9 @@ import java.util.List;
 @RequestMapping(path = "/users/{userId}/events")
 public class EventController {
     private final EventService eventService;
-    private final StatsClient statsClient;
+//    private final StatsClient statsClient;
 
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EventFullDto create(@PathVariable Long userId, @Valid @RequestBody NewEventDto newEventDto) {
         log.info("Пользователь отправил запрос на создание события");
@@ -36,7 +37,7 @@ public class EventController {
 
     @GetMapping("/{eventId}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto getByUser(Long userId, Long eventId) {
+    public EventFullDto getByUser(@PathVariable Long userId, @PathVariable Long eventId) {
         log.info("Получение информации о событии, добавленном пользователем {}", userId);
         return eventService.getByUser(userId, eventId);
     }
@@ -50,19 +51,19 @@ public class EventController {
         return eventService.getAllByUser(userId, from, size);
     }
 
-    @GetMapping("/{eventId}/requests")
-    @ResponseStatus(HttpStatus.OK)
-    public List<ParticipationRequestDto> getEventRequests(@PathVariable Long userId, @PathVariable Long eventId) {
-        log.info("Получение информации о запросах на участие в событии текущего пользователя");
-        return eventService.getEventRequests(userId, eventId);
-    }
-
-    @PatchMapping("/{eventId}/requests")
-    @ResponseStatus(HttpStatus.OK)
-    public EventRequestStatusUpdateResult updateRequestStatus(@PathVariable Long userId,
-                                                              @PathVariable Long eventId,
-                                                              @Valid @RequestBody EventRequestStatusUpdateRequest request) {
-        log.info("Изменение статуса заявок на участие в событии текущего пользователя");
-        return eventService.updateRequests(userId, eventId, request);
-    }
+//    @GetMapping("/{eventId}/requests")
+//    @ResponseStatus(HttpStatus.OK)
+//    public List<ParticipationRequestDto> getEventRequests(@PathVariable Long userId, @PathVariable Long eventId) {
+//        log.info("Получение информации о запросах на участие в событии текущего пользователя");
+//        return eventService.getEventRequests(userId, eventId);
+//    }
+//
+//    @PatchMapping("/{eventId}/requests")
+//    @ResponseStatus(HttpStatus.OK)
+//    public EventRequestStatusUpdateResult updateRequestStatus(@PathVariable Long userId,
+//                                                              @PathVariable Long eventId,
+//                                                              @Valid @RequestBody EventRequestStatusUpdateRequest request) {
+//        log.info("Изменение статуса заявок на участие в событии текущего пользователя");
+//        return eventService.updateRequests(userId, eventId, request);
+//    }
 }

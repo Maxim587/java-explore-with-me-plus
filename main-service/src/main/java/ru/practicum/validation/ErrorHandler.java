@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.practicum.dto.ApiError;
 import ru.practicum.exception.ConditionsConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ValidationException;
 
 import java.util.List;
 
@@ -66,4 +67,12 @@ public class ErrorHandler {
                 "Нарушение целостности данных",
                 HttpStatus.CONFLICT);
     }
+
+    @ExceptionHandler(ValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleConditionsConflict(final ValidationException e) {
+        log.debug(e.getMessage());
+        return new ApiError(e.getMessage(), "Нарушение условий выполнения запроса", HttpStatus.BAD_REQUEST);
+    }
+
 }

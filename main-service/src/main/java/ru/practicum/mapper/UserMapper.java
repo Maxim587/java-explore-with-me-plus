@@ -1,6 +1,7 @@
 package ru.practicum.mapper;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import ru.practicum.dto.NewUserRequest;
 import ru.practicum.dto.UserDto;
@@ -10,6 +11,7 @@ import ru.practicum.model.User;
 public interface UserMapper {
     UserDto mapToUserDto(User user);
 
+    @Mapping(target = "id", ignore = true)
     User mapToUser(NewUserRequest newUser);
 
     static UserDto toShortDto(User user) {

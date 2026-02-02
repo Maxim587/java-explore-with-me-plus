@@ -1,6 +1,7 @@
 package ru.practicum.dto;
 
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -9,7 +10,7 @@ public class UpdateEventAdminRequest {
     @Size(min = 20, max = 2000, message = "Значение должно содержать от 20 до 2000 символов")
     private String annotation;
 
-    @Positive(message = "Значение должно быть положительным числом")
+    @PositiveOrZero(message = "Значение должно быть больше или равно 0")
     private Long category;
 
     @Size(min = 20, max = 7000, message = "Значение должно содержать от 20 до 7000 символов")
@@ -21,7 +22,7 @@ public class UpdateEventAdminRequest {
 
     private Boolean paid;
 
-    @Positive(message = "Значение должно быть положительным числом")
+    @PositiveOrZero(message = "Значение должно быть больше или равно 0")
     private Integer participantLimit;
 
     private Boolean requestModeration;

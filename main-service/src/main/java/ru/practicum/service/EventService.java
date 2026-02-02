@@ -27,7 +27,7 @@ public interface EventService {
                                       LocalDateTime rangeEnd, Boolean onlyAvailable,
                                       String sort, Integer from, Integer size);
 
-    List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId);
+//    List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId);
 
-    EventRequestStatusUpdateResult updateRequests(Long userId, Long eventId, EventRequestStatusUpdateRequest request);
+//    EventRequestStatusUpdateResult updateRequests(Long userId, Long eventId, EventRequestStatusUpdateRequest request);
 }

@@ -16,13 +16,13 @@ public interface ParticipationRequestMapper {
     ParticipationRequestDto mapToParticipationRequestDto(ParticipationRequest request);
 
 
-    static ParticipationRequestDto requestToParticipationRequestDto(ParticipationRequest request) {
-        ParticipationRequestDto requestDto = new ParticipationRequestDto();
-        requestDto.setId(request.getId());
-        requestDto.setEvent(request.getEvent().getId());
-        requestDto.setRequester(request.getRequester().getId());
-        requestDto.setCreated(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(request.getCreated()));
-        requestDto.setStatus(request.getStatus().name());
-        return requestDto;
-    }
+//    static ParticipationRequestDto requestToParticipationRequestDto(ParticipationRequest request) {
+//        ParticipationRequestDto requestDto = new ParticipationRequestDto();
+//        requestDto.setId(request.getId());
+//        requestDto.setEvent(request.getEvent().getId());
+//        requestDto.setRequester(request.getRequester().getId());
+//        requestDto.setCreated(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(request.getCreated()));
+//        requestDto.setStatus(request.getStatus().name());
+//        return requestDto;
+//    }
 }
