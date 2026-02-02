@@ -2,7 +2,7 @@ package ru.practicum.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -12,7 +12,7 @@ public class NewEventDto {
     private String annotation;
 
     @NotNull(message = "Значение не должно быть пустым")
-    @Positive(message = "Значение должно быть положительным числом")
+    @PositiveOrZero(message = "Значение должно быть больше или равно 0")
     private Long category;
 
     @NotBlank(message = "Значение не должно быть пустым")
@@ -25,7 +25,7 @@ public class NewEventDto {
     @NotNull(message = "Значение не должно быть пустым")
     private Location location;
 
-    private Boolean paid;
+    private Boolean paid = false;
 
     private Integer participantLimit;
 

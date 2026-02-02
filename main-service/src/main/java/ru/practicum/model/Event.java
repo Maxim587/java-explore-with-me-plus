@@ -42,9 +42,11 @@ public class Event {
     @JoinColumn(name = "initiator_id")
     private User initiator;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "location_id")
-    private Location location;
+    @Column
+    private Double lat;
+
+    @Column
+    private Double lon;
 
     private Boolean paid;
 
@@ -58,7 +60,7 @@ public class Event {
     private Boolean requestModeration;
 
     @Enumerated(EnumType.STRING)
-    @Column(name= "state")
+    @Column(name = "state")
     private EventState state;
 
     @Column(name = "title", length = 120)

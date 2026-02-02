@@ -19,7 +19,7 @@ public class ParticipationRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private LocalDateTime created;
+    private final LocalDateTime created = LocalDateTime.now();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
@@ -30,5 +30,5 @@ public class ParticipationRequest {
     private User requester;
 
     @Enumerated(EnumType.STRING)
-    private ParticipationRequestStatus status;
+    private ParticipationRequestStatus status = ParticipationRequestStatus.PENDING;
 }
