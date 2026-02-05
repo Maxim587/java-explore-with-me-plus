@@ -1,6 +1,7 @@
 package ru.practicum.mapper;
 
 import lombok.experimental.UtilityClass;
+import org.mapstruct.factory.Mappers;
 import ru.practicum.dto.*;
 import ru.practicum.model.Category;
 import ru.practicum.model.Event;
@@ -13,6 +14,7 @@ import static ru.practicum.service.EventServiceImpl.DATE_TIME_FORMATTER;
 
 @UtilityClass
 public class EventMapper {
+    private final UserMapper userMapper = Mappers.getMapper(UserMapper.class);
 
     public static Event mapToEvent(NewEventDto newEventDto, User user, Category category, LocalDateTime eventDate) {
         Event event = new Event();
@@ -23,7 +25,6 @@ public class EventMapper {
         event.setCreatedOn(LocalDateTime.now());
         event.setInitiator(user);
         event.setCategory(category);
-        event.setConfirmedRequests(0L);
         event.getLocation().setLat(newEventDto.getLocation().getLat());
         event.getLocation().setLon(newEventDto.getLocation().getLon());
         event.setPaid(newEventDto.getPaid());
@@ -31,7 +32,6 @@ public class EventMapper {
         event.setRequestModeration(newEventDto.getRequestModeration());
         event.setState(EventState.PENDING);
         event.setTitle(newEventDto.getTitle());
-        event.setViews(0L);
 
         return event;
     }
@@ -42,12 +42,11 @@ public class EventMapper {
 
         fullDto.setAnnotation(event.getAnnotation());
         fullDto.setCategory(event.getCategory() != null ? CategoryMapper.mapToCategoryDto(event.getCategory()) : null);
-        fullDto.setConfirmedRequests(event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L);
         fullDto.setCreatedOn(DATE_TIME_FORMATTER.format(event.getCreatedOn()));
         fullDto.setDescription(event.getDescription());
         fullDto.setEventDate(event.getEventDate() != null ? DATE_TIME_FORMATTER.format(event.getEventDate()) : "");
         fullDto.setId(event.getId());
-        fullDto.setInitiator(UserMapper.toShortDto(event.getInitiator()));
+        fullDto.setInitiator(userMapper.toShortDto(event.getInitiator()));
         fullDto.setLocation(location);
         fullDto.setPaid(event.getPaid() != null ? event.getPaid() : false);
         fullDto.setParticipantLimit(event.getParticipantLimit());
@@ -55,7 +54,6 @@ public class EventMapper {
         fullDto.setRequestModeration(event.getRequestModeration() != null ? event.getRequestModeration() : true);
         fullDto.setState(event.getState().toString());
         fullDto.setTitle(event.getTitle());
-        fullDto.setViews(event.getViews() != null ? event.getViews() : 0L);
 
         return fullDto;
     }
@@ -65,13 +63,11 @@ public class EventMapper {
 
         shortDto.setAnnotation(event.getAnnotation());
         shortDto.setCategory(event.getCategory() != null ? CategoryMapper.mapToCategoryDto(event.getCategory()) : null);
-        shortDto.setConfirmedRequests(event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L);
         shortDto.setEventDate(event.getEventDate() != null ? DATE_TIME_FORMATTER.format(event.getEventDate()) : "");
         shortDto.setId(event.getId());
-        shortDto.setInitiator(event.getInitiator() != null ? UserMapper.toShortDto(event.getInitiator()) : null);
+        shortDto.setInitiator(event.getInitiator() != null ? userMapper.toShortDto(event.getInitiator()) : null);
         shortDto.setPaid(event.getPaid() != null ? event.getPaid() : false);
         shortDto.setTitle(event.getTitle());
-        shortDto.setViews(event.getViews() != null ? event.getViews() : 0L);
 
         return shortDto;
     }

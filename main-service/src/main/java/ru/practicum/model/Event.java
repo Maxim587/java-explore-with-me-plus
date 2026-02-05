@@ -26,9 +26,6 @@ public class Event {
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @Column(name = "confirmed_requests")
-    private Long confirmedRequests;
-
     @Column(name = "created_on", nullable = false)
     private LocalDateTime createdOn;
 
@@ -42,16 +39,10 @@ public class Event {
     @JoinColumn(name = "initiator_id")
     private User initiator;
 
-//    @Column
-//    private Double lat;
-//
-//    @Column
-//    private Double lon;
-
     private Boolean paid;
 
     @Column(name = "participant_limit")
-    private Integer participantLimit;
+    private Integer participantLimit = 0;
 
     @Column(name = "published_on")
     private LocalDateTime publishedOn;
@@ -65,8 +56,6 @@ public class Event {
 
     @Column(name = "title", length = 120)
     private String title;
-
-    private Long views;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
     @JoinColumn(name = "location_id", nullable = false)

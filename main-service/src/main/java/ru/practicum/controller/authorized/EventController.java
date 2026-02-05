@@ -5,8 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.StatsClient;
-import ru.practicum.dto.*;
+import ru.practicum.dto.EventFullDto;
+import ru.practicum.dto.EventShortDto;
+import ru.practicum.dto.NewEventDto;
+import ru.practicum.dto.UpdateEventUserRequest;
 import ru.practicum.service.EventService;
 
 import java.util.List;
@@ -17,7 +19,6 @@ import java.util.List;
 @RequestMapping(path = "/users/{userId}/events")
 public class EventController {
     private final EventService eventService;
-//    private final StatsClient statsClient;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,20 +51,4 @@ public class EventController {
         log.info("Получение событий, добавленных пользователем {}", userId);
         return eventService.getAllByUser(userId, from, size);
     }
-
-//    @GetMapping("/{eventId}/requests")
-//    @ResponseStatus(HttpStatus.OK)
-//    public List<ParticipationRequestDto> getEventRequests(@PathVariable Long userId, @PathVariable Long eventId) {
-//        log.info("Получение информации о запросах на участие в событии текущего пользователя");
-//        return eventService.getEventRequests(userId, eventId);
-//    }
-//
-//    @PatchMapping("/{eventId}/requests")
-//    @ResponseStatus(HttpStatus.OK)
-//    public EventRequestStatusUpdateResult updateRequestStatus(@PathVariable Long userId,
-//                                                              @PathVariable Long eventId,
-//                                                              @Valid @RequestBody EventRequestStatusUpdateRequest request) {
-//        log.info("Изменение статуса заявок на участие в событии текущего пользователя");
-//        return eventService.updateRequests(userId, eventId, request);
-//    }
 }

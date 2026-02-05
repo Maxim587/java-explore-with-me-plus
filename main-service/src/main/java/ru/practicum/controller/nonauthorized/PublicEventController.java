@@ -7,6 +7,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.EventFullDto;
+import ru.practicum.dto.EventSearchRequestUser;
 import ru.practicum.dto.EventShortDto;
 import ru.practicum.service.EventService;
 
@@ -22,9 +23,9 @@ public class PublicEventController {
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto getEvent(@PathVariable Long id) {
+    public EventFullDto getEvent(@PathVariable Long id, HttpServletRequest request) {
         log.info("Получение информации о событии");
-        return eventService.getPublicEvent(id);
+        return eventService.getPublicEvent(id, request);
     }
 
     @GetMapping
@@ -39,8 +40,11 @@ public class PublicEventController {
                                              @RequestParam(defaultValue = "false") Boolean onlyAvailable,
                                              @RequestParam(required = false) String sort,
                                              @RequestParam(defaultValue = "0") Integer from,
-                                             @RequestParam(defaultValue = "10") Integer size) {
+                                             @RequestParam(defaultValue = "10") Integer size,
+                                             HttpServletRequest request) {
         log.info("Получение событий публичным эндпоинтом");
-        return eventService.searchForUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
+        EventSearchRequestUser param = new EventSearchRequestUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
+
+        return eventService.searchForUser(param, request);
     }
 }

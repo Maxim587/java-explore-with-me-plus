@@ -7,6 +7,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.EventFullDto;
+import ru.practicum.dto.EventSearchRequestAdmin;
 import ru.practicum.dto.UpdateEventAdminRequest;
 import ru.practicum.model.EventState;
 import ru.practicum.service.EventService;
@@ -33,7 +34,8 @@ public class AdminEventController {
             @RequestParam(defaultValue = "10") Integer size) {
 
         log.info("Поиск события администратором");
-        return eventService.searchForAdmin(users, states, categories, rangeStart, rangeEnd, from, size);
+        EventSearchRequestAdmin param = new EventSearchRequestAdmin(users, states, categories, rangeStart, rangeEnd, from, size);
+        return eventService.searchForAdmin(param);
     }
 
     @PatchMapping("/{eventId}")

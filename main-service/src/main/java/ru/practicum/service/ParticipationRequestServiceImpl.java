@@ -36,8 +36,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         if (!event.getRequestModeration() || event.getParticipantLimit() == 0) {
             request.setStatus(ParticipationRequestStatus.CONFIRMED);
-            event.setConfirmedRequests(event.getConfirmedRequests() == null ? 1 : event.getConfirmedRequests() + 1);
-            eventRepository.save(event);
         }
         return mapper.mapToParticipationRequestDto(requestRepository.save(request));
     }
@@ -61,28 +59,28 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConditionsConflictException("Заявка находится в статусе " + request.getStatus() + ". Отмена заявки невозможна");
         }
 
-        if (request.getStatus() == ParticipationRequestStatus.CONFIRMED) {
-            Event event = request.getEvent();
-            event.setConfirmedRequests(event.getConfirmedRequests() - 1);
-            eventRepository.save(event);
-        }
-
         request.setStatus(ParticipationRequestStatus.CANCELED);
         return mapper.mapToParticipationRequestDto(requestRepository.save(request));
     }
 
     @Override
+    @Transactional
     public EventRequestStatusUpdateResult changeRequestStatus(Long userId, Long eventId, EventRequestStatusUpdateRequest dto) {
         Event event = getEvent(eventId);
         checkRequesterIsEventInitiator(userId, event);
-        ParticipationRequestStatus status = getStatusFromString(dto.getStatus());
+        ParticipationRequestStatus status = ParticipationRequestStatus.fromString(dto.getStatus());
+
+        if (!(status.equals(ParticipationRequestStatus.CONFIRMED) ||
+              status.equals(ParticipationRequestStatus.REJECTED))) {
+            throw new ConditionsConflictException("Новый статус для заявок может принимать значения CONFIRMED или REJECTED. Передан " + status);
+        }
 
         if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
             return new EventRequestStatusUpdateResult(Collections.emptyList(), Collections.emptyList());
         }
 
-        long confirmedRequests = event.getConfirmedRequests() == null ? 0 : event.getConfirmedRequests();
-        int possibleToConfirmCount = event.getParticipantLimit() - (int) confirmedRequests;
+        int confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
+        int possibleToConfirmCount = event.getParticipantLimit() - confirmedRequests;
 
         if (status == ParticipationRequestStatus.CONFIRMED && possibleToConfirmCount == 0) {
             throw new ConditionsConflictException("Достигнут лимит на участие у события");
@@ -91,27 +89,38 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         List<ParticipationRequest> requests = requestRepository.findAllByIdIn(dto.getRequestIds());
         List<ParticipationRequestDto> confirmed = new ArrayList<>();
         List<ParticipationRequestDto> rejected = new ArrayList<>();
+        List<Long> confirmedIds = new ArrayList<>();
+        List<Long> rejectedIds = new ArrayList<>();
 
         if (status == ParticipationRequestStatus.CONFIRMED) {
             for (int i = 0; i < requests.size(); i++) {
                 ParticipationRequest request = requests.get(i);
                 checkStatus(request);
                 if (i + 1 <= possibleToConfirmCount) {
-                    request.setStatus(ParticipationRequestStatus.CONFIRMED);
-                    confirmed.add(mapper.mapToParticipationRequestDto(request));
+                    ParticipationRequestDto confirmedDto = mapper.mapToParticipationRequestDto(request);
+                    confirmedDto.setStatus(ParticipationRequestStatus.CONFIRMED.name());
+                    confirmed.add(confirmedDto);
+                    confirmedIds.add(request.getId());
                 } else {
-                    request.setStatus(ParticipationRequestStatus.REJECTED);
-                    rejected.add(mapper.mapToParticipationRequestDto(request));
+                    ParticipationRequestDto rejectedDto = mapper.mapToParticipationRequestDto(request);
+                    rejectedDto.setStatus(ParticipationRequestStatus.REJECTED.name());
+                    rejected.add(rejectedDto);
+                    rejectedIds.add(request.getId());
                 }
             }
-            event.setConfirmedRequests(confirmedRequests + confirmed.size());
-            eventRepository.save(event);
+            requestRepository.updateStatus(ParticipationRequestStatus.CONFIRMED, confirmedIds);
+            if (!rejectedIds.isEmpty()) {
+                requestRepository.updateStatus(ParticipationRequestStatus.REJECTED, rejectedIds);
+            }
         } else {
             for (ParticipationRequest request : requests) {
                 checkStatus(request);
-                request.setStatus(ParticipationRequestStatus.REJECTED);
-                rejected.add(mapper.mapToParticipationRequestDto(request));
+                ParticipationRequestDto rejectedDto = mapper.mapToParticipationRequestDto(request);
+                rejectedDto.setStatus(ParticipationRequestStatus.REJECTED.name());
+                rejected.add(rejectedDto);
+                rejectedIds.add(request.getId());
             }
+            requestRepository.updateStatus(ParticipationRequestStatus.REJECTED, rejectedIds);
         }
 
         return new EventRequestStatusUpdateResult(confirmed, rejected);
@@ -126,7 +135,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
                 .map(mapper::mapToParticipationRequestDto)
                 .toList();
     }
-
 
     private Event getEvent(Long eventId) {
         return eventRepository.findById(eventId)
@@ -168,25 +176,10 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConditionsConflictException("Нельзя участвовать в неопубликованном событии");
         }
 
-        long confirmedRequests = event.getConfirmedRequests() == null ? 0 : event.getConfirmedRequests();
+        int confirmedRequests = requestRepository.countByEventIdAndStatus(event.getId(), ParticipationRequestStatus.CONFIRMED);
 
-        if (event.getParticipantLimit() > 0 && event.getParticipantLimit().longValue() == confirmedRequests) {
+        if (event.getParticipantLimit() > 0 && event.getParticipantLimit() == confirmedRequests) {
             throw new ConditionsConflictException("Достигнут лимит на участие у события");
         }
-    }
-
-    private ParticipationRequestStatus getStatusFromString(String status) {
-        ParticipationRequestStatus targetStatus;
-        try {
-            targetStatus = ParticipationRequestStatus.valueOf(status.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Некорректное значение параметра status: " + status);
-        }
-
-        if (!(targetStatus.equals(ParticipationRequestStatus.CONFIRMED) ||
-              targetStatus.equals(ParticipationRequestStatus.REJECTED))) {
-            throw new ConditionsConflictException("Новый статус для заявок может принимать значения CONFIRMED или REJECTED. Передан " + status);
-        }
-        return targetStatus;
     }
 }
