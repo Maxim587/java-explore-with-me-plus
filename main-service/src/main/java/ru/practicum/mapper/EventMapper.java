@@ -3,6 +3,7 @@ package ru.practicum.mapper;
 import lombok.experimental.UtilityClass;
 import org.mapstruct.factory.Mappers;
 import ru.practicum.dto.*;
+import ru.practicum.exception.ValidationException;
 import ru.practicum.model.Category;
 import ru.practicum.model.Event;
 import ru.practicum.model.EventState;
@@ -133,6 +134,14 @@ public class EventMapper {
 
         if (request.getTitle() != null) {
             event.setTitle(request.getTitle());
+        }
+
+        if (request.getEventDate() != null) {
+            LocalDateTime newEventDate = LocalDateTime.parse(request.getEventDate(), DATE_TIME_FORMATTER);
+            if (!newEventDate.isAfter(LocalDateTime.now())) {
+                throw new ValidationException("Дата события должна быть больше текущей даты");
+            }
+            event.setEventDate(LocalDateTime.parse(request.getEventDate(), DATE_TIME_FORMATTER));
         }
     }
 
