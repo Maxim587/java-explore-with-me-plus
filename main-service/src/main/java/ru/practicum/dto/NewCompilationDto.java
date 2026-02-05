@@ -10,7 +10,7 @@ import java.util.Set;
 public class NewCompilationDto {
     private Set<Long> events;
 
-    private Boolean pinned;
+    private boolean pinned;
 
     @NotBlank(message = "Значение не должно быть пустым")
     @Size(min = 1, max = 50, message = "Значение должно содержать от 1 до 50 символов")
