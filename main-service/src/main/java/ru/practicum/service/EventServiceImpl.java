@@ -10,7 +10,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.EndpointHitDto;
 import ru.practicum.NewEndpointHitDto;
 import ru.practicum.StatsClient;
 import ru.practicum.ViewStatsDto;
@@ -168,8 +167,8 @@ public class EventServiceImpl implements EventService {
                 request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));
 
         log.info("sending request to stat server from getPublicEvent() with dto={}", hitDto);
-        EndpointHitDto resultDto = statsClient.hit(hitDto);
-        log.info("response from stat server received from getPublicEvent() with resultDto={}", resultDto);
+        statsClient.hit(hitDto);
+        //log.info("response from stat server received from getPublicEvent() with resultDto={}", resultDto);
         dto.setViews(++views);
         return dto;
     }

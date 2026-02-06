@@ -3,6 +3,7 @@ package ru.practicum;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestClient;
@@ -27,13 +28,13 @@ public class StatsClient {
                 .build();
     }
 
-    public EndpointHitDto hit(NewEndpointHitDto newEndpointHitDto) {
+    public ResponseEntity<Object> hit(NewEndpointHitDto hitDto) {
         return restClient.post()
-                .uri("/hit")
+                .uri(uriBuilder -> uriBuilder.path("/hit").build())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(newEndpointHitDto)
+                .body(hitDto)
                 .retrieve()
-                .body(EndpointHitDto.class);
+                .toEntity(Object.class);
     }
 
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
