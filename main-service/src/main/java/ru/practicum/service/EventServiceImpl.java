@@ -161,8 +161,8 @@ public class EventServiceImpl implements EventService {
         long confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
         dto.setConfirmedRequests(confirmedRequests);
 
-        statsClient.hit(new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
-                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER)));
+//        statsClient.hit(new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
+//                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER)));
         dto.setViews(++views);
         return dto;
     }
