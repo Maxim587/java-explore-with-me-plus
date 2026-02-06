@@ -7,6 +7,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Data
 @Entity
@@ -19,7 +20,7 @@ public class ParticipationRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private final LocalDateTime created = LocalDateTime.now();
+    private final LocalDateTime created = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
