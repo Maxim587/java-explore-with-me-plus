@@ -4,11 +4,13 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Predicate;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.EndpointHitDto;
 import ru.practicum.NewEndpointHitDto;
 import ru.practicum.StatsClient;
 import ru.practicum.ViewStatsDto;
@@ -30,6 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -161,8 +164,12 @@ public class EventServiceImpl implements EventService {
         long confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
         dto.setConfirmedRequests(confirmedRequests);
 
-//        statsClient.hit(new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
-//                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER)));
+        NewEndpointHitDto hitDto = new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
+                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));
+
+        log.info("sending request to stat server from getPublicEvent() with dto={}", hitDto);
+        EndpointHitDto resultDto = statsClient.hit(hitDto);
+        log.info("response from stat server received from getPublicEvent() with resultDto={}", resultDto);
         dto.setViews(++views);
         return dto;
     }
