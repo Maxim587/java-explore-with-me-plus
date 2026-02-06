@@ -39,7 +39,7 @@ public class Event {
     @JoinColumn(name = "initiator_id")
     private User initiator;
 
-    private Boolean paid;
+    private boolean paid;
 
     @Column(name = "participant_limit")
     private Integer participantLimit = 0;

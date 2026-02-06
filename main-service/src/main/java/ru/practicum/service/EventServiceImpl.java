@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.NewEndpointHitDto;
 import ru.practicum.StatsClient;
+import ru.practicum.ViewStatsDto;
 import ru.practicum.dto.*;
 import ru.practicum.exception.ConditionsConflictException;
 import ru.practicum.exception.NotFoundException;
@@ -60,7 +61,7 @@ public class EventServiceImpl implements EventService {
         EventFullDto dto = EventMapper.mapToFullDto(savedEvent);
         dto.setViews(0L);
         dto.setConfirmedRequests(0L);
-        return EventMapper.mapToFullDto(savedEvent);
+        return dto;
     }
 
     @Override
@@ -125,21 +126,6 @@ public class EventServiceImpl implements EventService {
 
         EventMapper.updateEventFromAdminRequest(request, event);
 
-        if (request.getStateAction() != null) {
-            if (EventStateAdmin.valueOf(request.getStateAction()) == EventStateAdmin.PUBLISH_EVENT) {
-                if (event.getState() != EventState.PENDING) {
-                    throw new ConditionsConflictException("Событие можно публиковать только если оно в состоянии ожидания публикации");
-                }
-                event.setState(EventState.PUBLISHED);
-                event.setPublishedOn(LocalDateTime.now());
-            } else if (EventStateAdmin.valueOf(request.getStateAction()) == EventStateAdmin.REJECT_EVENT) {
-                if (event.getState() == EventState.PUBLISHED) {
-                    throw new ConditionsConflictException("Событие можно отклонить только если оно еще не опубликовано");
-                }
-                event.setState(EventState.CANCELED);
-            }
-        }
-
         EventFullDto dto = EventMapper.mapToFullDto(eventRepository.save(event));
         dto.setViews(getEventViews(event));
         long confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
@@ -172,13 +158,12 @@ public class EventServiceImpl implements EventService {
 
         Long views = getEventViews(event);
         EventFullDto dto = EventMapper.mapToFullDto(event);
-        dto.setViews(views);
         long confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
         dto.setConfirmedRequests(confirmedRequests);
 
         statsClient.hit(new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
                 request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER)));
-
+        dto.setViews(++views);
         return dto;
     }
 
@@ -207,8 +192,8 @@ public class EventServiceImpl implements EventService {
         List<Event> events = searchCriteriaOpt.map(predicate -> eventRepository.findAll(predicate, page).getContent())
                 .orElseGet(() -> eventRepository.findAll(page).getContent());
 
-        Map<Long, Long> viewsMap = getEventsViews(events);
         Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(events);
+        Map<Long, Long> viewsMap = getEventsViews(events);
 
         return events.stream()
                 .map(event -> {
@@ -352,22 +337,16 @@ public class EventServiceImpl implements EventService {
             return Collections.emptyMap();
         }
 
-        return statsClient.getStats(start, end, uris, true)
-                .stream()
-                .collect(Collectors.toMap(
-                        stats -> extractEventFromUri(stats.getUri()),
-                        stats -> stats.getHits() != null ? stats.getHits() : 0L,
-                        (existing, replacement) -> existing)
-                );
-    }
-
-    private Long extractEventFromUri(String uri) {
-        try {
-            String[] parts = uri.split("/");
-            return Long.parseLong(parts[parts.length - 1]);
-        } catch (Exception e) {
-            throw new ValidationException("Неверный формат URI " + uri);
+        List<ViewStatsDto> viewDtos = statsClient.getStats(start, end, uris, true);
+        Map<Long, Long> viewsMap = new HashMap<>();
+        for (ViewStatsDto view : viewDtos) {
+            String[] parts = view.getUri().split("/");
+            if (parts.length == 3) {
+                Long eventId = Long.parseLong(parts[parts.length - 1]);
+                viewsMap.put(eventId, view.getHits());
+            }
         }
+        return viewsMap;
     }
 
     Map<Long, Long> getConfirmedRequests(List<Event> events) {

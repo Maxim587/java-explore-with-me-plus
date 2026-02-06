@@ -1,6 +1,7 @@
 package ru.practicum.dto;
 
 import lombok.Data;
+import ru.practicum.model.EventState;
 
 @Data
 public class EventFullDto {
@@ -13,11 +14,11 @@ public class EventFullDto {
     private Long id;
     private UserShortDto initiator;
     private Location location;
-    private Boolean paid;
+    private boolean paid;
     private Integer participantLimit;
     private String publishedOn;
     private Boolean requestModeration;
-    private String state;
+    private EventState state;
     private String title;
     private Long views;
 }

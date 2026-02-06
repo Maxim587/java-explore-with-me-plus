@@ -31,7 +31,7 @@ public class NewEventDto {
     @PositiveOrZero(message = "Значение должно быть больше или равно 0")
     private Integer participantLimit = 0;
 
-    private Boolean requestModeration;
+    private Boolean requestModeration = true;
 
     @NotBlank(message = "Значение не должно быть пустым")
     @Size(min = 3, max = 120, message = "Значение должно содержать от 3 до 120 символов")

@@ -10,7 +10,7 @@ public enum EventUserSort {
         EventUserSort eventSort;
         try {
             eventSort = EventUserSort.valueOf(sort.toUpperCase());
-        } catch (ValidationException e) {
+        } catch (IllegalArgumentException e) {
             throw new ValidationException("Параметр сортировки sort может принимать значения EVENT_DATE или VIEWS. Передан " + sort);
         }
         return eventSort;

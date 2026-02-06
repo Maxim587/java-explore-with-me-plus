@@ -3,19 +3,20 @@ package ru.practicum.mapper;
 import lombok.experimental.UtilityClass;
 import org.mapstruct.factory.Mappers;
 import ru.practicum.dto.*;
+import ru.practicum.exception.ConditionsConflictException;
 import ru.practicum.exception.ValidationException;
-import ru.practicum.model.Category;
-import ru.practicum.model.Event;
-import ru.practicum.model.EventState;
-import ru.practicum.model.User;
+import ru.practicum.model.*;
 
 import java.time.LocalDateTime;
 
+import static ru.practicum.model.EventStateAdmin.PUBLISH_EVENT;
+import static ru.practicum.model.EventStateAdmin.REJECT_EVENT;
 import static ru.practicum.service.EventServiceImpl.DATE_TIME_FORMATTER;
 
 @UtilityClass
 public class EventMapper {
     private final UserMapper userMapper = Mappers.getMapper(UserMapper.class);
+    private final LocationMapper locationMapper = Mappers.getMapper(LocationMapper.class);
 
     public static Event mapToEvent(NewEventDto newEventDto, User user, Category category, LocalDateTime eventDate) {
         Event event = new Event();
@@ -26,8 +27,7 @@ public class EventMapper {
         event.setCreatedOn(LocalDateTime.now());
         event.setInitiator(user);
         event.setCategory(category);
-        event.getLocation().setLat(newEventDto.getLocation().getLat());
-        event.getLocation().setLon(newEventDto.getLocation().getLon());
+        event.setLocation(locationMapper.mapLocationToEventLocation(newEventDto.getLocation()));
         event.setPaid(newEventDto.getPaid());
         event.setParticipantLimit(newEventDto.getParticipantLimit());
         event.setRequestModeration(newEventDto.getRequestModeration());
@@ -38,22 +38,21 @@ public class EventMapper {
     }
 
     public static EventFullDto mapToFullDto(Event event) {
-        Location location = new Location(event.getLocation().getLat(), event.getLocation().getLon());
         EventFullDto fullDto = new EventFullDto();
 
         fullDto.setAnnotation(event.getAnnotation());
-        fullDto.setCategory(event.getCategory() != null ? CategoryMapper.mapToCategoryDto(event.getCategory()) : null);
+        fullDto.setCategory(CategoryMapper.mapToCategoryDto(event.getCategory()));
         fullDto.setCreatedOn(DATE_TIME_FORMATTER.format(event.getCreatedOn()));
         fullDto.setDescription(event.getDescription());
-        fullDto.setEventDate(event.getEventDate() != null ? DATE_TIME_FORMATTER.format(event.getEventDate()) : "");
+        fullDto.setEventDate(DATE_TIME_FORMATTER.format(event.getEventDate()));
         fullDto.setId(event.getId());
         fullDto.setInitiator(userMapper.toShortDto(event.getInitiator()));
-        fullDto.setLocation(location);
-        fullDto.setPaid(event.getPaid() != null ? event.getPaid() : false);
+        fullDto.setLocation(locationMapper.mapEventLocationToLocation(event.getLocation()));
+        fullDto.setPaid(event.isPaid());
         fullDto.setParticipantLimit(event.getParticipantLimit());
-        fullDto.setPublishedOn(event.getPublishedOn() != null ? DATE_TIME_FORMATTER.format(event.getPublishedOn()) : "");
-        fullDto.setRequestModeration(event.getRequestModeration() != null ? event.getRequestModeration() : true);
-        fullDto.setState(event.getState().toString());
+        fullDto.setPublishedOn(event.getPublishedOn() != null ? DATE_TIME_FORMATTER.format(event.getPublishedOn()) : null);
+        fullDto.setRequestModeration(event.getRequestModeration());
+        fullDto.setState(event.getState());
         fullDto.setTitle(event.getTitle());
 
         return fullDto;
@@ -63,11 +62,11 @@ public class EventMapper {
         EventShortDto shortDto = new EventShortDto();
 
         shortDto.setAnnotation(event.getAnnotation());
-        shortDto.setCategory(event.getCategory() != null ? CategoryMapper.mapToCategoryDto(event.getCategory()) : null);
-        shortDto.setEventDate(event.getEventDate() != null ? DATE_TIME_FORMATTER.format(event.getEventDate()) : "");
+        shortDto.setCategory(CategoryMapper.mapToCategoryDto(event.getCategory()));
+        shortDto.setEventDate(DATE_TIME_FORMATTER.format(event.getEventDate()));
         shortDto.setId(event.getId());
-        shortDto.setInitiator(event.getInitiator() != null ? userMapper.toShortDto(event.getInitiator()) : null);
-        shortDto.setPaid(event.getPaid() != null ? event.getPaid() : false);
+        shortDto.setInitiator(userMapper.toShortDto(event.getInitiator()));
+        shortDto.setPaid(event.isPaid());
         shortDto.setTitle(event.getTitle());
 
         return shortDto;
@@ -114,10 +113,8 @@ public class EventMapper {
             event.setDescription(request.getDescription());
         }
 
-        if (request.getLocation() != null && request.getLocation().getLat() != null
-            && request.getLocation().getLon() != null) {
-            event.getLocation().setLat(request.getLocation().getLat());
-            event.getLocation().setLon(request.getLocation().getLon());
+        if (request.getLocation() != null) {
+            event.setLocation(locationMapper.mapLocationToEventLocation(request.getLocation()));
         }
 
         if (request.getPaid() != null) {
@@ -142,6 +139,21 @@ public class EventMapper {
                 throw new ValidationException("Дата события должна быть больше текущей даты");
             }
             event.setEventDate(LocalDateTime.parse(request.getEventDate(), DATE_TIME_FORMATTER));
+        }
+
+        if (request.getStateAction() != null) {
+            EventStateAdmin stateAdmin = EventStateAdmin.fromString(request.getStateAction());
+            if (stateAdmin.equals(PUBLISH_EVENT)) {
+                if (event.getState() != EventState.PENDING) {
+                    throw new ConditionsConflictException("Событие можно публиковать только если оно в состоянии ожидания публикации");
+                }
+                event.setState(EventState.PUBLISHED);
+            } else if (stateAdmin.equals(REJECT_EVENT)) {
+                if (event.getState() == EventState.PUBLISHED) {
+                    throw new ConditionsConflictException("Событие можно отклонить только если оно еще не опубликовано");
+                }
+                event.setState(EventState.CANCELED);
+            }
         }
     }
 
