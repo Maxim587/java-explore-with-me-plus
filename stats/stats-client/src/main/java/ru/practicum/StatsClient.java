@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -32,7 +33,7 @@ public class StatsClient {
                     log.error(
                             "Api request was failed. Response status: {}, body: {}",
                             response.getStatusCode(),
-                            new String(response.getBody().readAllBytes())
+                            new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8)
                     );
 //                    throw new ApiError("Something went wrong");
                 }))

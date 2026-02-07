@@ -32,7 +32,7 @@ public class StatsController {
                                        @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end,
                                        @RequestParam(required = false) List<String> uris,
                                        @RequestParam(defaultValue = "false") Boolean unique) {
-        log.info("Сервер статистики stats-server получил запрос на предоставление статистики, start={}, end={}, uris={}, unique={}", start, end, uris, unique );
+        log.info("Сервер статистики stats-server получил запрос на предоставление статистики, start={}, end={}, uris={}, unique={}", start, end, uris, unique);
         return statsService.getStats(start, end, uris, unique);
     }
 }
