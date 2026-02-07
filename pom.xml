@@ -59,6 +59,25 @@
 				<artifactId>lombok-mapstruct-binding</artifactId>
 				<version>0.2.0</version>
 			</dependency>
+
+			<dependency>
+				<groupId>com.querydsl</groupId>
+				<artifactId>querydsl-jpa</artifactId>
+				<classifier>jakarta</classifier>
+				<version>5.1.0</version>
+			</dependency>
+
+			<dependency>
+				<groupId>ru.practicum</groupId>
+				<artifactId>stats-client</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.zalando</groupId>
+				<artifactId>logbook-spring-boot-starter</artifactId>
+				<version>3.7.2</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 

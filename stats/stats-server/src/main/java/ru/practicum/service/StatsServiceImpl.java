@@ -43,7 +43,7 @@ public class StatsServiceImpl implements StatsService {
     }
 
     private void checkDates(LocalDateTime start, LocalDateTime end) {
-        if (!start.isBefore(end)) {
+        if (start.isAfter(end)) {
             throw new ConditionsNotMetException("Начальная дата не может быть позже конечной");
         }
     }
