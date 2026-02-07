@@ -314,11 +314,12 @@ public class EventServiceImpl implements EventService {
     }
 
     private Long getEventViews(Event event) {
-        if (event.getPublishedOn() == null) {
-            return 0L;
-        }
-
-        LocalDateTime start = event.getPublishedOn();
+//        if (event.getPublishedOn() == null) {
+//            return 0L;
+//        }
+//
+//        LocalDateTime start = event.getPublishedOn();
+        LocalDateTime start = LocalDateTime.now().minusYears(100);
         LocalDateTime end = LocalDateTime.now();
         List<String> uris = List.of("/events/" + event.getId());
 
