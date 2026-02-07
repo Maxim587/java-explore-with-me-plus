@@ -227,8 +227,6 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> viewsMap = getEventsViews(events);
         Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(events);
 
-        statsClient.hit(new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
-                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER)));
 
         List<EventShortDto> dtos = new ArrayList<>();
         for (Event event : events) {

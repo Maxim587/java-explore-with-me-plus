@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.NewEndpointHitDto;
+import ru.practicum.StatsClient;
 import ru.practicum.dto.EventFullDto;
 import ru.practicum.dto.EventSearchRequestUser;
 import ru.practicum.dto.EventShortDto;
@@ -14,12 +16,15 @@ import ru.practicum.service.EventService;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static ru.practicum.service.EventServiceImpl.DATE_TIME_FORMATTER;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/events")
 public class PublicEventController {
     private final EventService eventService;
+    private final StatsClient statsClient;
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
@@ -44,7 +49,19 @@ public class PublicEventController {
                                              HttpServletRequest request) {
         log.info("Получение событий публичным эндпоинтом");
         EventSearchRequestUser param = new EventSearchRequestUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
+        log.info("Сформирован DTO с параметрами запроса {}, request={}", param, request);
 
-        return eventService.searchForUser(param, request);
+        log.info("Вызов метода сервиса searchForUser");
+        List<EventShortDto> resp = eventService.searchForUser(param, request);
+        log.info("Вызов метода сервиса searchForUser завершен, получен resp={}", resp);
+
+        NewEndpointHitDto hitDto = new NewEndpointHitDto("main-service", request.getRequestURI(),
+                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));
+
+        log.info("Отправка запроса в сервис статистики из метода searchForUser() с dto={}", hitDto);
+        statsClient.hit(hitDto);
+        log.info("Отправка запроса в сервис статистики из метода searchForUser() завершена успешно");
+
+        return resp;
     }
 }
