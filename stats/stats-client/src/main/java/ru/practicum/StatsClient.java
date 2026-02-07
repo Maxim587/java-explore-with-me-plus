@@ -1,7 +1,9 @@
 package ru.practicum;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Component
 public class StatsClient {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -25,19 +28,32 @@ public class StatsClient {
         this.baseUrl = baseUrl;
         restClient = RestClient.builder()
                 .baseUrl(baseUrl)
+                .defaultStatusHandler(HttpStatusCode::is5xxServerError, ((request, response) -> {
+                    log.error(
+                            "Api request was failed. Response status: {}, body: {}",
+                            response.getStatusCode(),
+                            new String(response.getBody().readAllBytes())
+                    );
+//                    throw new ApiError("Something went wrong");
+                }))
                 .build();
     }
 
     public ResponseEntity<Object> hit(NewEndpointHitDto hitDto) {
-        return restClient.post()
+        log.info("Клиентом статистики stats-client получен запрос на добавление записи hitDto={}", hitDto);
+        ResponseEntity<Object> resp = restClient.post()
                 .uri(uriBuilder -> uriBuilder.path("/hit").build())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(hitDto)
+                .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .toEntity(Object.class);
+        log.info("Клиентом статистики stats-client получен ответ от сервера ResponseEntity<Object>={}", resp);
+        return resp;
     }
 
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
+        log.info("Клиентом статистики stats-client получен запрос на получение статистики hitDto={}, hitDto={}, hitDto={}, hitDto={}", start, end, uris, unique);
         URI uri = UriComponentsBuilder
                 .fromUriString(baseUrl + "/stats")
                 .queryParam("start", start.format(DATE_TIME_FORMATTER))

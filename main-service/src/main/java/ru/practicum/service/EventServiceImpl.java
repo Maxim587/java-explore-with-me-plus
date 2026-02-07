@@ -224,7 +224,9 @@ public class EventServiceImpl implements EventService {
 
         Predicate searchCriteria = getUserSearchCriteria(param);
         List<Event> events = eventRepository.findAll(searchCriteria, page).getContent();
+        log.info("Получение статистики для событий {}", events);
         Map<Long, Long> viewsMap = getEventsViews(events);
+        log.info("Ответ от сервиса статистики {}", viewsMap);
         Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(events);
 
 
@@ -341,7 +343,9 @@ public class EventServiceImpl implements EventService {
             return Collections.emptyMap();
         }
 
+        log.info("Запрос к сервису статистики statsClient.getStats start={}, end={}, uris={}", start, end, uris);
         List<ViewStatsDto> viewDtos = statsClient.getStats(start, end, uris, true);
+        log.info("Ответ от сервиса статистики statsClient.getStats viewDtos={}", viewDtos);
         Map<Long, Long> viewsMap = new HashMap<>();
         for (ViewStatsDto view : viewDtos) {
             String[] parts = view.getUri().split("/");
