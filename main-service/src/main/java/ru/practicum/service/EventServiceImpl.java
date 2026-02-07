@@ -10,7 +10,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.NewEndpointHitDto;
 import ru.practicum.StatsClient;
 import ru.practicum.ViewStatsDto;
 import ru.practicum.dto.*;
@@ -37,7 +36,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class EventServiceImpl implements EventService {
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
-    private static final String APP_NAME = "main-service";
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
@@ -163,12 +161,6 @@ public class EventServiceImpl implements EventService {
         long confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, ParticipationRequestStatus.CONFIRMED);
         dto.setConfirmedRequests(confirmedRequests);
 
-        NewEndpointHitDto hitDto = new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
-                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));
-
-        log.info("sending request to stat server from getPublicEvent() with dto={}", hitDto);
-        statsClient.hit(hitDto);
-        //log.info("response from stat server received from getPublicEvent() with resultDto={}", resultDto);
         dto.setViews(++views);
         return dto;
     }
@@ -314,12 +306,11 @@ public class EventServiceImpl implements EventService {
     }
 
     private Long getEventViews(Event event) {
-//        if (event.getPublishedOn() == null) {
-//            return 0L;
-//        }
-//
-//        LocalDateTime start = event.getPublishedOn();
-        LocalDateTime start = LocalDateTime.now().minusYears(100);
+        if (event.getPublishedOn() == null) {
+            return 0L;
+        }
+
+        LocalDateTime start = event.getPublishedOn();
         LocalDateTime end = LocalDateTime.now();
         List<String> uris = List.of("/events/" + event.getId());
 

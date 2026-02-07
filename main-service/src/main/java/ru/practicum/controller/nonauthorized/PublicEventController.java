@@ -23,6 +23,7 @@ import static ru.practicum.service.EventServiceImpl.DATE_TIME_FORMATTER;
 @RequiredArgsConstructor
 @RequestMapping(path = "/events")
 public class PublicEventController {
+    private static final String APP_NAME = "main-service";
     private final EventService eventService;
     private final StatsClient statsClient;
 
@@ -30,6 +31,13 @@ public class PublicEventController {
     @ResponseStatus(HttpStatus.OK)
     public EventFullDto getEvent(@PathVariable Long id, HttpServletRequest request) {
         log.info("Получение информации о событии");
+
+        NewEndpointHitDto hitDto = new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
+                request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));
+
+        log.info("Отправка запроса в сервис статистики из метода getEvent() с dto={}", hitDto);
+        statsClient.hit(hitDto);
+        log.info("Отправка запроса в сервис статистики из метода getEvent() завершена успешно");
         return eventService.getPublicEvent(id, request);
     }
 
@@ -49,13 +57,11 @@ public class PublicEventController {
                                              HttpServletRequest request) {
         log.info("Получение событий публичным эндпоинтом");
         EventSearchRequestUser param = new EventSearchRequestUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
-        log.info("Сформирован DTO с параметрами запроса {}, request={}", param, request);
+        log.info("Сформирован DTO с параметрами запроса {}", param);
 
-        log.info("Вызов метода сервиса searchForUser");
         List<EventShortDto> resp = eventService.searchForUser(param, request);
-        log.info("Вызов метода сервиса searchForUser завершен, получен resp={}", resp);
 
-        NewEndpointHitDto hitDto = new NewEndpointHitDto("main-service", request.getRequestURI(),
+        NewEndpointHitDto hitDto = new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
                 request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));
 
         log.info("Отправка запроса в сервис статистики из метода searchForUser() с dto={}", hitDto);
