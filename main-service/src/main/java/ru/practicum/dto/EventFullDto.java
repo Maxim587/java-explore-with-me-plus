@@ -3,6 +3,9 @@ package ru.practicum.dto;
 import lombok.Data;
 import ru.practicum.model.EventState;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 public class EventFullDto {
     private String annotation;
@@ -21,4 +24,5 @@ public class EventFullDto {
     private EventState state;
     private String title;
     private Long views;
+    private List<CommentDto> comments = new ArrayList<>();
 }

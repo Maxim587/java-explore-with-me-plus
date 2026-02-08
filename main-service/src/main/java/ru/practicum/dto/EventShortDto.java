@@ -2,6 +2,9 @@ package ru.practicum.dto;
 
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 public class EventShortDto {
     private String annotation;
@@ -13,4 +16,5 @@ public class EventShortDto {
     private Boolean paid;
     private String title;
     private Long views;
+    private List<CommentDto> comments = new ArrayList<>();
 }
