@@ -38,7 +38,7 @@ public class PublicEventController {
         log.info("Отправка запроса в сервис статистики из метода getEvent() с dto={}", hitDto);
         statsClient.hit(hitDto);
         log.info("Отправка запроса в сервис статистики из метода getEvent() завершена успешно");
-        return eventService.getPublicEvent(id, request);
+        return eventService.getPublicEvent(id);
     }
 
     @GetMapping
@@ -59,7 +59,7 @@ public class PublicEventController {
         EventSearchRequestUser param = new EventSearchRequestUser(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
         log.info("Сформирован DTO с параметрами запроса {}", param);
 
-        List<EventShortDto> resp = eventService.searchForUser(param, request);
+        List<EventShortDto> resp = eventService.searchForUser(param);
 
         NewEndpointHitDto hitDto = new NewEndpointHitDto(APP_NAME, request.getRequestURI(),
                 request.getRemoteAddr(), LocalDateTime.now().format(DATE_TIME_FORMATTER));

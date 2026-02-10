@@ -1,6 +1,5 @@
 package ru.practicum.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import ru.practicum.dto.*;
 
 import java.util.List;
@@ -15,11 +14,11 @@ public interface EventService {
 
     EventFullDto getByUser(Long userId, Long eventId);
 
-    EventFullDto getPublicEvent(Long eventId, HttpServletRequest request);
+    EventFullDto getPublicEvent(Long eventId);
 
     List<EventShortDto> getAllByUser(Long userId, Integer from, Integer size);
 
     List<EventFullDto> searchForAdmin(EventSearchRequestAdmin param);
 
-    List<EventShortDto> searchForUser(EventSearchRequestUser param, HttpServletRequest request);
+    List<EventShortDto> searchForUser(EventSearchRequestUser param);
 }

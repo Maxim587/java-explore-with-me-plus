@@ -2,15 +2,16 @@ package ru.practicum.mapper;
 
 import lombok.experimental.UtilityClass;
 import org.mapstruct.factory.Mappers;
-import ru.practicum.dto.*;
-import ru.practicum.exception.ConditionsConflictException;
-import ru.practicum.exception.ValidationException;
-import ru.practicum.model.*;
+import ru.practicum.dto.EventFullDto;
+import ru.practicum.dto.EventShortDto;
+import ru.practicum.dto.NewEventDto;
+import ru.practicum.model.Category;
+import ru.practicum.model.Event;
+import ru.practicum.model.EventState;
+import ru.practicum.model.User;
 
 import java.time.LocalDateTime;
 
-import static ru.practicum.model.EventStateAdmin.PUBLISH_EVENT;
-import static ru.practicum.model.EventStateAdmin.REJECT_EVENT;
 import static ru.practicum.service.EventServiceImpl.DATE_TIME_FORMATTER;
 
 @UtilityClass
@@ -72,89 +73,5 @@ public class EventMapper {
         return shortDto;
     }
 
-    public static void updateEventFromUserRequest(UpdateEventUserRequest request, Event event) {
-        if (request.getAnnotation() != null) {
-            event.setAnnotation(request.getAnnotation());
-        }
-
-        if (request.getDescription() != null) {
-            event.setDescription(request.getDescription());
-        }
-
-        if (request.getLocation() != null && request.getLocation().getLat() != null
-            && request.getLocation().getLon() != null) {
-            event.getLocation().setLat(request.getLocation().getLat());
-            event.getLocation().setLon(request.getLocation().getLon());
-        }
-
-        if (request.getPaid() != null) {
-            event.setPaid(request.getPaid());
-        }
-
-        if (request.getParticipantLimit() != null) {
-            event.setParticipantLimit(request.getParticipantLimit());
-        }
-
-        if (request.getRequestModeration() != null) {
-            event.setRequestModeration(request.getRequestModeration());
-        }
-
-        if (request.getTitle() != null) {
-            event.setTitle(request.getTitle());
-        }
-    }
-
-    public static void updateEventFromAdminRequest(UpdateEventAdminRequest request, Event event) {
-        if (request.getAnnotation() != null) {
-            event.setAnnotation(request.getAnnotation());
-        }
-
-        if (request.getDescription() != null) {
-            event.setDescription(request.getDescription());
-        }
-
-        if (request.getLocation() != null) {
-            event.setLocation(locationMapper.mapLocationToEventLocation(request.getLocation()));
-        }
-
-        if (request.getPaid() != null) {
-            event.setPaid(request.getPaid());
-        }
-
-        if (request.getParticipantLimit() != null) {
-            event.setParticipantLimit(request.getParticipantLimit());
-        }
-
-        if (request.getRequestModeration() != null) {
-            event.setRequestModeration(request.getRequestModeration());
-        }
-
-        if (request.getTitle() != null) {
-            event.setTitle(request.getTitle());
-        }
-
-        if (request.getEventDate() != null) {
-            LocalDateTime newEventDate = LocalDateTime.parse(request.getEventDate(), DATE_TIME_FORMATTER);
-            if (!newEventDate.isAfter(LocalDateTime.now())) {
-                throw new ValidationException("Дата события должна быть больше текущей даты");
-            }
-            event.setEventDate(LocalDateTime.parse(request.getEventDate(), DATE_TIME_FORMATTER));
-        }
-
-        if (request.getStateAction() != null) {
-            EventStateAdmin stateAdmin = EventStateAdmin.fromString(request.getStateAction());
-            if (stateAdmin.equals(PUBLISH_EVENT)) {
-                if (event.getState() != EventState.PENDING) {
-                    throw new ConditionsConflictException("Событие можно публиковать только если оно в состоянии ожидания публикации");
-                }
-                event.setState(EventState.PUBLISHED);
-            } else if (stateAdmin.equals(REJECT_EVENT)) {
-                if (event.getState() == EventState.PUBLISHED) {
-                    throw new ConditionsConflictException("Событие можно отклонить только если оно еще не опубликовано");
-                }
-                event.setState(EventState.CANCELED);
-            }
-        }
-    }
 
 }
