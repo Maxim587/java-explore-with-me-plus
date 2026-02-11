@@ -60,7 +60,7 @@ public class CompilationServiceImpl implements CompilationService {
                     .toList();
         }
 
-        return repository.findAll(page).stream()
+        return repository.getCompilationList(page).stream()
                 .map(mapper::mapCompilationToCompilationDto)
                 .toList();
     }
