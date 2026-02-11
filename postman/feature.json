@@ -599,6 +599,7 @@
                   "    pm.response.to.be.json;\r",
                   "});\r",
                   "\r",
+                  "const source = JSON.parse(pm.request.body.raw);\r",
                   "const target = pm.response.json();\r",
                   "var query = {};\r",
                   "pm.request.url.query.all().forEach((param) => { query[param.key] = param.value});\r",
@@ -634,6 +635,15 @@
                 "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{request_body}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/users/:userId/comments?eventId=0",
               "host": [
