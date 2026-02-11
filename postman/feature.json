@@ -1120,19 +1120,19 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": ""
+      "value": "http://localhost:8080"
     },
     {
       "key": "uid",
-      "value": ""
+      "value": "1"
     },
     {
       "key": "comId",
-      "value": ""
+      "value": "1"
     },
     {
       "key": "eid",
-      "value": ""
+      "value": "1"
     },
     {
       "key": "response",
