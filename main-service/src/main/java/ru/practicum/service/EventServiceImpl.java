@@ -7,19 +7,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.StatsClient;
+import ru.practicum.ViewStatsDto;
 import ru.practicum.dto.*;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.exception.ValidationException;
 import ru.practicum.mapper.CommentMapper;
 import ru.practicum.mapper.EventMapper;
-import ru.practicum.model.*;
-import ru.practicum.repository.*;
+import ru.practicum.mapper.LocationMapper;
 import ru.practicum.model.Category;
 import ru.practicum.model.Event;
+import ru.practicum.model.ParticipationRequestStatus;
 import ru.practicum.model.User;
-import ru.practicum.repository.CategoryRepository;
-import ru.practicum.repository.EventRepository;
-import ru.practicum.repository.UserRepository;
+import ru.practicum.repository.*;
 import ru.practicum.util.EventUtils;
 
 import java.time.LocalDateTime;
@@ -38,11 +37,11 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final EventUtils eventUtils;
     private final ParticipationRequestRepository requestRepository;
     private final CommentRepository commentRepository;
     private final CommentMapper commentMapper;
     private final StatsClient statsClient;
+    private final LocationMapper locationMapper;
 
     @Override
     @Transactional
@@ -54,7 +53,7 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Категория с id = " + newEventDto.getCategory() + " не найдена"));
 
         LocalDateTime eventDate = LocalDateTime.parse(newEventDto.getEventDate(), DATE_TIME_FORMATTER);
-        eventUtils.checkEventDateIsValid(eventDate);
+        EventUtils.checkEventDateIsValid(eventDate);
         Event savedEvent = eventRepository.save(EventMapper.mapToEvent(newEventDto, user, category, eventDate));
         EventFullDto dto = EventMapper.mapToFullDto(savedEvent);
         dto.setViews(0L);
@@ -67,13 +66,10 @@ public class EventServiceImpl implements EventService {
     public EventFullDto updateByUser(Long userId, Long eventId, UpdateEventUserRequest request) {
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
-        eventUtils.updateEventFieldsFromUserRequest(request, event);
+        Optional.ofNullable(request.getCategory()).ifPresent(id -> event.setCategory(getCategory(id)));
+        EventUtils.updateEventFieldsFromUserRequest(request, event);
         EventFullDto dto = EventMapper.mapToFullDto(eventRepository.save(event));
-        eventUtils.setEventFullDtoFields(dto, event);
-        List<CommentDto> comments = commentRepository.findByEventId(eventId).stream()
-                .map(commentMapper::mapToCommentDto)
-                .toList();
-        dto.setComments(comments);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -82,13 +78,11 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest request) {
         Event event = getEvent(eventId);
-        eventUtils.updateEventFieldsFromAdminRequest(request, event);
+        Optional.ofNullable(request.getCategory()).ifPresent(id -> event.setCategory(getCategory(id)));
+        Optional.ofNullable(request.getLocation()).ifPresent(loc -> event.setLocation(locationMapper.mapLocationToEventLocation(loc)));
+        EventUtils.updateEventFieldsFromAdminRequest(request, event);
         EventFullDto dto = EventMapper.mapToFullDto(eventRepository.save(event));
-        eventUtils.setEventFullDtoFields(dto, event);
-        List<CommentDto> comments = commentRepository.findByEventId(eventId).stream()
-                .map(commentMapper::mapToCommentDto)
-                .toList();
-        dto.setComments(comments);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -98,11 +92,7 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
         EventFullDto dto = EventMapper.mapToFullDto(event);
-        eventUtils.setEventFullDtoFields(dto, event);
-        List<CommentDto> comments = commentRepository.findByEventId(eventId).stream()
-                .map(commentMapper::mapToCommentDto)
-                .toList();
-        dto.setComments(comments);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -110,14 +100,10 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventFullDto getPublicEvent(Long eventId) {
         Event event = getEvent(eventId);
-        eventUtils.checkEventIsPublished(event);
+        EventUtils.checkEventIsPublished(event);
         EventFullDto dto = EventMapper.mapToFullDto(event);
-        eventUtils.setEventFullDtoFields(dto, event);
+        setEventFullDtoFields(dto, event);
 
-        List<CommentDto> comments = commentRepository.findByEventId(eventId).stream()
-                .map(commentMapper::mapToCommentDto)
-                .toList();
-        dto.setComments(comments);
         return dto;
     }
 
@@ -125,8 +111,9 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getAllByUser(Long userId, Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
         List<Event> events = eventRepository.findByInitiatorId(userId, pageable).getContent();
-        Map<Long, Long> viewsMap = eventUtils.getEventsViews(events);
-        Map<Long, Long> confirmedRequestsMap = eventUtils.getConfirmedRequests(events);
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        Set<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toSet());
+        Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(eventIds);
         Map<Long, List<CommentDto>> commentsMap = getCommentsMap(eventIds);
 
         return events.stream()
@@ -142,15 +129,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventFullDto> searchForAdmin(EventSearchRequestAdmin param) {
-        eventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
+        EventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
         PageRequest page = PageRequest.of(param.getFrom() / param.getSize(), param.getSize());
-        Optional<Predicate> searchCriteriaOpt = eventUtils.getAdminSearchCriteria(param);
+        Optional<Predicate> searchCriteriaOpt = EventUtils.getAdminSearchCriteria(param);
         List<Event> events = searchCriteriaOpt.map(predicate -> eventRepository.findAll(predicate, page).getContent())
                 .orElseGet(() -> eventRepository.findAll(page).getContent());
-
-        Map<Long, Long> confirmedRequestsMap = eventUtils.getConfirmedRequests(events);
-        Map<Long, Long> viewsMap = eventUtils.getEventsViews(events);
         Set<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toSet());
+        Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(eventIds);
+        Map<Long, Long> viewsMap = getEventsViews(events);
         Map<Long, List<CommentDto>> commentsMap = getCommentsMap(eventIds);
 
         return events.stream()
@@ -166,15 +152,13 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventShortDto> searchForUser(EventSearchRequestUser param) {
-        eventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
-        PageRequest page = eventUtils.getUserSearchPage(param);
-        Predicate searchCriteria = eventUtils.getUserSearchCriteria(param);
+        EventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
+        PageRequest page = EventUtils.getUserSearchPage(param);
+        Predicate searchCriteria = EventUtils.getUserSearchCriteria(param);
         List<Event> events = eventRepository.findAll(searchCriteria, page).getContent();
-        Map<Long, Long> viewsMap = eventUtils.getEventsViews(events);
-        Map<Long, Long> confirmedRequestsMap = eventUtils.getConfirmedRequests(events);
-
         Set<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toSet());
-
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(eventIds);
         Map<Long, List<CommentDto>> commentsMap = getCommentsMap(eventIds);
 
         List<EventShortDto> dtos = new ArrayList<>();
@@ -197,99 +181,6 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
     }
 
-    @Override
-    @Transactional
-    public CommentDto createComment(Long userId, Long eventId, NewCommentDto commentDto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-
-        Event event = eventRepository.findByIdAndState(eventId, EventState.PUBLISHED)
-                .orElseThrow(() -> new NotFoundException("Событие с id: " + eventId + " не найдено или не опубликовано"));
-
-        return commentMapper.mapToCommentDto(commentRepository.save(commentMapper.mapToComment(commentDto, user, event)));
-    }
-
-    @Override
-    @Transactional
-    public CommentDto updateComment(Long userId, Long commentId, NewCommentDto commentDto) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new NotFoundException("Комментарий с id: " + commentId + " не найден"));
-        checkUserIsCommentAuthor(userId, comment);
-        comment.setText(commentDto.getText());
-        comment.setStatus(CommentStatus.PENDING);
-
-        return commentMapper.mapToCommentDto(commentRepository.save(comment));
-    }
-
-    @Override
-    public List<CommentDtoAdmin> searchCommentsByAdmin(CommentSearchRequestAdmin param) {
-        checkDates(param.getRangeStart().orElse(null), param.getRangeEnd().orElse(null));
-        Optional<Predicate> searchCriteriaOpt = getAdminCommentSearchCriteria(param);
-        PageRequest page = PageRequest.of(param.getFrom() / param.getSize(), param.getSize());
-
-        return searchCriteriaOpt.map(predicate -> commentRepository.findAll(predicate, page).getContent())
-                .orElseGet(() -> commentRepository.findAll(page).getContent())
-                .stream()
-                .map(commentMapper::mapToCommentDtoAdmin)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public List<CommentDtoAdmin> changeCommentStatus(CommentStatusChangeRequest dto) {
-        CommentStatus status = CommentStatus.fromString(dto.getStatus());
-        if (!(status == CommentStatus.CONFIRMED || status == CommentStatus.REJECTED)) {
-            throw new ConditionsConflictException("Запрос можно перевести в CONFIRMED или REJECTED. Передан статус " + status);
-        }
-        commentRepository.updateStatus(status, dto.getCommentIds());
-        return commentRepository.findAllByIdIn(dto.getCommentIds()).stream()
-                .map(commentMapper::mapToCommentDtoAdmin)
-                .toList();
-    }
-
-    @Override
-    public void deleteCommentByAdmin(Long commentId) {
-        commentRepository.deleteById(commentId);
-    }
-
-    @Override
-    public CommentDtoAdmin getCommentById(Long commentId) {
-        return commentRepository.findById(commentId)
-                .map(commentMapper::mapToCommentDtoAdmin)
-                .orElseThrow(() -> new NotFoundException("Комментарий с id: " + commentId + " не найден"));
-    }
-
-    @Override
-    public void deleteCommentByUser(Long userId, Long commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new NotFoundException("Комментарий с id: " + commentId + " не найден"));
-        checkUserIsCommentAuthor(userId, comment);
-        commentRepository.deleteById(commentId);
-    }
-
-
-    private Optional<Predicate> getAdminCommentSearchCriteria(CommentSearchRequestAdmin req) {
-        QComment comment = QComment.comment;
-        BooleanBuilder booleanBuilder = new BooleanBuilder();
-
-        req.getText().filter(text -> !text.isBlank())
-                .ifPresent(text -> booleanBuilder.and(comment.text.containsIgnoreCase(text)));
-        req.getEventIds().filter(eventIds -> !eventIds.isEmpty())
-                .ifPresent(eventIds -> booleanBuilder.and(comment.event.id.in(eventIds)));
-        req.getUserId().ifPresent(userId -> booleanBuilder.and(comment.author.id.eq(userId)));
-        req.getRangeStart().ifPresent(start -> booleanBuilder.and(comment.created.goe(start)));
-        req.getRangeEnd().ifPresent(end -> booleanBuilder.and(comment.created.loe(end)));
-        req.getStatusList().ifPresent(statusList -> booleanBuilder.and(comment.status.in(statusList)));
-
-        return Optional.ofNullable(booleanBuilder.getValue());
-    }
-
-    private void checkUserIsCommentAuthor(Long userId, Comment comment) {
-        if (!Objects.equals(comment.getAuthor().getId(), userId)) {
-            throw new ConditionsConflictException("Пользователь с id=" + userId + " не является автором комментария id=" + comment.getId());
-        }
-    }
-
     private Map<Long, List<CommentDto>> getCommentsMap(Set<Long> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
             return Collections.emptyMap();
@@ -300,5 +191,69 @@ public class EventServiceImpl implements EventService {
                     .add(commentMapper.mapToCommentDto(comment));
         });
         return commentsMap;
+    }
+
+    private Long getEventViews(Event event) {
+        if (event.getPublishedOn() == null) {
+            return 0L;
+        }
+
+        LocalDateTime start = event.getPublishedOn();
+        LocalDateTime end = LocalDateTime.now();
+        List<String> uris = List.of("/events/" + event.getId());
+
+        return statsClient.getStats(start, end, uris, true)
+                .stream()
+                .findFirst()
+                .map(stats -> stats.getHits() != null ? stats.getHits() : 0L)
+                .orElse(0L);
+    }
+
+    private Map<Long, Long> getEventsViews(List<Event> events) {
+        List<String> uris = new ArrayList<>();
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime end = start;
+        for (Event event : events) {
+            uris.add("/events/" + event.getId());
+            if (event.getPublishedOn() != null && start.isAfter(event.getPublishedOn())) {
+                start = event.getPublishedOn();
+            }
+        }
+        if (start.isEqual(end)) {
+            return Collections.emptyMap();
+        }
+
+        List<ViewStatsDto> viewDtos = statsClient.getStats(start, end, uris, true);
+        Map<Long, Long> viewsMap = new HashMap<>();
+        for (ViewStatsDto view : viewDtos) {
+            String[] parts = view.getUri().split("/");
+            if (parts.length == 3) {
+                Long eventId = Long.parseLong(parts[parts.length - 1]);
+                viewsMap.put(eventId, view.getHits());
+            }
+        }
+        return viewsMap;
+    }
+
+    private void setEventFullDtoFields(EventFullDto dto, Event event) {
+        dto.setViews(getEventViews(event));
+        dto.setConfirmedRequests((long) requestRepository.countByEventIdAndStatus(event.getId(), ParticipationRequestStatus.CONFIRMED));
+        dto.setComments(getCommentsDtoList(event.getId()));
+    }
+
+    private List<CommentDto> getCommentsDtoList(Long eventId) {
+        return commentRepository.findByEventId(eventId).stream()
+                .map(commentMapper::mapToCommentDto)
+                .toList();
+    }
+
+    private Map<Long, Long> getConfirmedRequests(Set<Long> eventIds) {
+        return requestRepository.getConfirmedRequestsCount(eventIds, ParticipationRequestStatus.CONFIRMED).stream()
+                .collect(Collectors.toMap(object -> (Long) object[0], object -> (Long) object[1]));
+    }
+
+    private Category getCategory(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Категория с id " + id + " не найдена"));
     }
 }

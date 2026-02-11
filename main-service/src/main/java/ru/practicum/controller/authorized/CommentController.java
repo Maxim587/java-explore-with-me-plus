@@ -7,14 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.CommentDto;
 import ru.practicum.dto.NewCommentDto;
-import ru.practicum.service.EventService;
+import ru.practicum.service.CommentService;
 
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/users/{userId}/comments")
 public class CommentController {
-    private final EventService eventService;
+    private final CommentService commentService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -22,7 +22,7 @@ public class CommentController {
                                  @RequestParam Long eventId,
                                  @Valid @RequestBody NewCommentDto newDto) {
         log.info("Пользователь отправил запрос на создание комментария userId={}, eventId={}, newDto={}", userId, eventId, newDto);
-        return eventService.createComment(userId, eventId, newDto);
+        return commentService.createComment(userId, eventId, newDto);
     }
 
     @PatchMapping("/{commentId}")
@@ -31,7 +31,7 @@ public class CommentController {
                                     @PathVariable Long commentId,
                                     @Valid @RequestBody NewCommentDto newDto) {
         log.info("Пользователь отправил запрос на изменение комментария userId={}, commentId={}, newDto={}", userId, commentId, newDto);
-        return eventService.updateComment(userId, commentId, newDto);
+        return commentService.updateComment(userId, commentId, newDto);
     }
 
     @DeleteMapping("/{commentId}")
@@ -39,6 +39,6 @@ public class CommentController {
     public void deleteCommentByUser(@PathVariable Long userId,
                                     @PathVariable Long commentId) {
         log.info("Создан запрос на удаление комментария пользователем, commentId={}, userId={}", commentId, userId);
-        eventService.deleteCommentByUser(userId, commentId);
+        commentService.deleteCommentByUser(userId, commentId);
     }
 }

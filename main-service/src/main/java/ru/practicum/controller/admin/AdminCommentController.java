@@ -10,7 +10,7 @@ import ru.practicum.dto.CommentDtoAdmin;
 import ru.practicum.dto.CommentSearchRequestAdmin;
 import ru.practicum.dto.CommentStatusChangeRequest;
 import ru.practicum.model.CommentStatus;
-import ru.practicum.service.EventService;
+import ru.practicum.service.CommentService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping(path = "/admin/comments")
 public class AdminCommentController {
-    private final EventService eventService;
+    private final CommentService commentService;
 
     @GetMapping
     public List<CommentDtoAdmin> getComments(@RequestParam(required = false) String text,
@@ -33,27 +33,27 @@ public class AdminCommentController {
                                              @RequestParam(defaultValue = "10") Integer size) {
         CommentSearchRequestAdmin param = new CommentSearchRequestAdmin(text, eventIds, userId, rangeStart, rangeEnd, statusList, from, size);
         log.info("Создан запрос на поиск комментариев администратором с параметрами param={}", param);
-        return eventService.searchCommentsByAdmin(param);
+        return commentService.searchCommentsByAdmin(param);
     }
 
     @PatchMapping
     @ResponseStatus(HttpStatus.OK)
     public List<CommentDtoAdmin> changeCommentStatus(@Valid @RequestBody CommentStatusChangeRequest dto) {
         log.info("Создан запрос на изменение статусов комментариев dto={}", dto);
-        return eventService.changeCommentStatus(dto);
+        return commentService.changeCommentStatus(dto);
     }
 
     @DeleteMapping("/{commentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCommentByAdmin(@PathVariable Long commentId) {
         log.info("Создан запрос на удаление комментария администратором, commentId={}", commentId);
-        eventService.deleteCommentByAdmin(commentId);
+        commentService.deleteCommentByAdmin(commentId);
     }
 
     @GetMapping("/{commentId}")
     public CommentDtoAdmin getCommentById(@PathVariable Long commentId) {
         log.info("Создан запрос на получение комментария администратором, commentId={}", commentId);
-        return eventService.getCommentById(commentId);
+        return commentService.getCommentById(commentId);
     }
 
 }
