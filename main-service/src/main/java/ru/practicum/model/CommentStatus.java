@@ -8,13 +8,10 @@ public enum CommentStatus {
     REJECTED;
 
     public static CommentStatus fromString(String status) {
-        CommentStatus targetStatus;
         try {
-            targetStatus = CommentStatus.valueOf(status.toUpperCase());
+            return CommentStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Некорректное значение параметра status: " + status);
         }
-
-        return targetStatus;
     }
 }

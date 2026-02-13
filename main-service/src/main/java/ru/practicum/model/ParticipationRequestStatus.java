@@ -9,13 +9,10 @@ public enum ParticipationRequestStatus {
     CANCELED;
 
     public static ParticipationRequestStatus fromString(String status) {
-        ParticipationRequestStatus targetStatus;
         try {
-            targetStatus = ParticipationRequestStatus.valueOf(status.toUpperCase());
+            return ParticipationRequestStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Некорректное значение параметра status: " + status);
         }
-
-        return targetStatus;
     }
 }

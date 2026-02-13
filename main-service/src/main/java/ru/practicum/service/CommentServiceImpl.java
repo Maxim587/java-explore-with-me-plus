@@ -42,7 +42,8 @@ public class CommentServiceImpl implements CommentService {
         Event event = eventRepository.findByIdAndState(eventId, EventState.PUBLISHED)
                 .orElseThrow(() -> new NotFoundException("Событие с id: " + eventId + " не найдено или не опубликовано"));
 
-        return commentMapper.mapToCommentDto(commentRepository.save(commentMapper.mapToComment(commentDto, user, event)));
+        Comment comment = commentRepository.save(commentMapper.mapToComment(commentDto, user, event));
+        return commentMapper.mapToCommentDto(comment);
     }
 
     @Override
@@ -74,8 +75,8 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public List<CommentDtoAdmin> changeCommentStatus(CommentStatusChangeRequest dto) {
         CommentStatus status = CommentStatus.fromString(dto.getStatus());
-        if (!(status == CommentStatus.CONFIRMED || status == CommentStatus.REJECTED)) {
-            throw new ConditionsConflictException("Запрос можно перевести в CONFIRMED или REJECTED. Передан статус " + status);
+        if (status != CommentStatus.CONFIRMED && status != CommentStatus.REJECTED) {
+            throw new ConditionsConflictException("Комментарий можно перевести в CONFIRMED или REJECTED. Передан статус " + status);
         }
         commentRepository.updateStatus(status, dto.getCommentIds());
         return commentRepository.findAllByIdIn(dto.getCommentIds()).stream()
@@ -84,6 +85,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public void deleteCommentByAdmin(Long commentId) {
         commentRepository.deleteById(commentId);
     }
@@ -96,6 +98,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public void deleteCommentByUser(Long userId, Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new NotFoundException("Комментарий с id: " + commentId + " не найден"));
