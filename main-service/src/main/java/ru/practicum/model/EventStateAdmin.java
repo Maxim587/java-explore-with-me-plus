@@ -7,12 +7,10 @@ public enum EventStateAdmin {
     REJECT_EVENT;
 
     public static EventStateAdmin fromString(String eventStateAdmin) {
-        EventStateAdmin state;
         try {
-            state = EventStateAdmin.valueOf(eventStateAdmin.toUpperCase());
+            return EventStateAdmin.valueOf(eventStateAdmin.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Параметр EventStateAdmin может принимать значения PUBLISH_EVENT или REJECT_EVENT. Передан " + eventStateAdmin);
         }
-        return state;
     }
 }

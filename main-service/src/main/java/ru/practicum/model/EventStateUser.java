@@ -7,12 +7,10 @@ public enum EventStateUser {
     CANCEL_REVIEW;
 
     public static EventStateUser fromString(String eventStateUser) {
-        EventStateUser state;
         try {
-            state = EventStateUser.valueOf(eventStateUser.toUpperCase());
+            return EventStateUser.valueOf(eventStateUser.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Параметр EventStateUser может принимать значения SEND_TO_REVIEW или CANCEL_REVIEW. Передан " + eventStateUser);
         }
-        return state;
     }
 }

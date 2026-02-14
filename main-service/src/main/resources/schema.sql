@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS compilation_events;
 DROP TABLE IF EXISTS participation_requests;
+DROP TABLE IF EXISTS comments;
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS compilations;
 DROP TABLE IF EXISTS categories;
@@ -69,9 +70,23 @@ CREATE TABLE IF NOT EXISTS participation_requests (
 CREATE INDEX idx_participation_requests_requester_id ON participation_requests (requester_id);
 CREATE INDEX idx_participation_requests_event_id ON participation_requests (event_id);
 
-CREATE TABLE IF NOT EXISTS compilation_events(
+CREATE TABLE IF NOT EXISTS compilation_events (
     compilation_id      BIGINT NOT NULL,
     event_id            BIGINT NOT NULL,
     CONSTRAINT fk_compilation_events_to_compilations FOREIGN KEY (compilation_id) REFERENCES compilations(id),
     CONSTRAINT fk_compilation_events_to_events FOREIGN KEY (event_id) REFERENCES events(id)
 );
+
+CREATE TABLE IF NOT EXISTS comments (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 0 MINVALUE 0) PRIMARY KEY,
+    text            VARCHAR(2000) NOT NULL,
+    event_id        BIGINT NOT NULL,
+    author_id       BIGINT NOT NULL,
+    created_at      TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    status          VARCHAR(100) NOT NULL,
+    CONSTRAINT fk_comments_to_events FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    CONSTRAINT fk_comments_to_users FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_comments_event_id ON comments (event_id);
+CREATE INDEX idx_comments_author_id ON comments (author_id);

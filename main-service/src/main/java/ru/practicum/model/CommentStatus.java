@@ -2,15 +2,14 @@ package ru.practicum.model;
 
 import ru.practicum.exception.ValidationException;
 
-public enum ParticipationRequestStatus {
+public enum CommentStatus {
     PENDING,
     CONFIRMED,
-    REJECTED,
-    CANCELED;
+    REJECTED;
 
-    public static ParticipationRequestStatus fromString(String status) {
+    public static CommentStatus fromString(String status) {
         try {
-            return ParticipationRequestStatus.valueOf(status.toUpperCase());
+            return CommentStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Некорректное значение параметра status: " + status);
         }

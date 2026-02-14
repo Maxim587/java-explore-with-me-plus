@@ -7,24 +7,25 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.StatsClient;
+import ru.practicum.ViewStatsDto;
 import ru.practicum.dto.*;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.mapper.CommentMapper;
 import ru.practicum.mapper.EventMapper;
+import ru.practicum.mapper.LocationMapper;
 import ru.practicum.model.Category;
 import ru.practicum.model.Event;
+import ru.practicum.model.ParticipationRequestStatus;
 import ru.practicum.model.User;
-import ru.practicum.repository.CategoryRepository;
-import ru.practicum.repository.EventRepository;
-import ru.practicum.repository.UserRepository;
+import ru.practicum.repository.*;
 import ru.practicum.util.EventUtils;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -36,7 +37,11 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final EventUtils eventUtils;
+    private final ParticipationRequestRepository requestRepository;
+    private final CommentRepository commentRepository;
+    private final CommentMapper commentMapper;
+    private final StatsClient statsClient;
+    private final LocationMapper locationMapper;
 
     @Override
     @Transactional
@@ -48,7 +53,7 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Категория с id = " + newEventDto.getCategory() + " не найдена"));
 
         LocalDateTime eventDate = LocalDateTime.parse(newEventDto.getEventDate(), DATE_TIME_FORMATTER);
-        eventUtils.checkEventDateIsValid(eventDate);
+        EventUtils.checkEventDateIsValid(eventDate);
         Event savedEvent = eventRepository.save(EventMapper.mapToEvent(newEventDto, user, category, eventDate));
         EventFullDto dto = EventMapper.mapToFullDto(savedEvent);
         dto.setViews(0L);
@@ -61,9 +66,10 @@ public class EventServiceImpl implements EventService {
     public EventFullDto updateByUser(Long userId, Long eventId, UpdateEventUserRequest request) {
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
-        eventUtils.updateEventFieldsFromUserRequest(request, event);
+        Optional.ofNullable(request.getCategory()).ifPresent(id -> event.setCategory(getCategory(id)));
+        EventUtils.updateEventFieldsFromUserRequest(request, event);
         EventFullDto dto = EventMapper.mapToFullDto(eventRepository.save(event));
-        eventUtils.setEventFullDtoFields(dto, event);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -72,9 +78,11 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest request) {
         Event event = getEvent(eventId);
-        eventUtils.updateEventFieldsFromAdminRequest(request, event);
+        Optional.ofNullable(request.getCategory()).ifPresent(id -> event.setCategory(getCategory(id)));
+        Optional.ofNullable(request.getLocation()).ifPresent(loc -> event.setLocation(locationMapper.mapLocationToEventLocation(loc)));
+        EventUtils.updateEventFieldsFromAdminRequest(request, event);
         EventFullDto dto = EventMapper.mapToFullDto(eventRepository.save(event));
-        eventUtils.setEventFullDtoFields(dto, event);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -84,7 +92,7 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
         EventFullDto dto = EventMapper.mapToFullDto(event);
-        eventUtils.setEventFullDtoFields(dto, event);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -92,9 +100,9 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventFullDto getPublicEvent(Long eventId) {
         Event event = getEvent(eventId);
-        eventUtils.checkEventIsPublished(event);
+        EventUtils.checkEventIsPublished(event);
         EventFullDto dto = EventMapper.mapToFullDto(event);
-        eventUtils.setEventFullDtoFields(dto, event);
+        setEventFullDtoFields(dto, event);
 
         return dto;
     }
@@ -103,14 +111,17 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getAllByUser(Long userId, Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
         List<Event> events = eventRepository.findByInitiatorId(userId, pageable).getContent();
-        Map<Long, Long> viewsMap = eventUtils.getEventsViews(events);
-        Map<Long, Long> confirmedRequestsMap = eventUtils.getConfirmedRequests(events);
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        Set<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toSet());
+        Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(eventIds);
+        Map<Long, List<CommentDto>> commentsMap = getCommentsMap(eventIds);
 
         return events.stream()
                 .map(event -> {
                     EventShortDto dto = EventMapper.mapToShortDto(event);
                     dto.setViews(viewsMap.getOrDefault(dto.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(dto.getId(), 0L));
+                    dto.setComments(commentsMap.getOrDefault(dto.getId(), Collections.emptyList()));
                     return dto;
                 })
                 .toList();
@@ -118,20 +129,22 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventFullDto> searchForAdmin(EventSearchRequestAdmin param) {
-        eventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
+        EventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
         PageRequest page = PageRequest.of(param.getFrom() / param.getSize(), param.getSize());
-        Optional<Predicate> searchCriteriaOpt = eventUtils.getAdminSearchCriteria(param);
+        Optional<Predicate> searchCriteriaOpt = EventUtils.getAdminSearchCriteria(param);
         List<Event> events = searchCriteriaOpt.map(predicate -> eventRepository.findAll(predicate, page).getContent())
                 .orElseGet(() -> eventRepository.findAll(page).getContent());
-
-        Map<Long, Long> confirmedRequestsMap = eventUtils.getConfirmedRequests(events);
-        Map<Long, Long> viewsMap = eventUtils.getEventsViews(events);
+        Set<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toSet());
+        Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(eventIds);
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        Map<Long, List<CommentDto>> commentsMap = getCommentsMap(eventIds);
 
         return events.stream()
                 .map(event -> {
                     EventFullDto dto = EventMapper.mapToFullDto(event);
                     dto.setViews(viewsMap.getOrDefault(dto.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(dto.getId(), 0L));
+                    dto.setComments(commentsMap.getOrDefault(dto.getId(), Collections.emptyList()));
                     return dto;
                 })
                 .toList();
@@ -139,12 +152,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventShortDto> searchForUser(EventSearchRequestUser param) {
-        eventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
-        PageRequest page = eventUtils.getUserSearchPage(param);
-        Predicate searchCriteria = eventUtils.getUserSearchCriteria(param);
+        EventUtils.checkDates(param.getRangeStart(), param.getRangeEnd());
+        PageRequest page = EventUtils.getUserSearchPage(param);
+        Predicate searchCriteria = EventUtils.getUserSearchCriteria(param);
         List<Event> events = eventRepository.findAll(searchCriteria, page).getContent();
-        Map<Long, Long> viewsMap = eventUtils.getEventsViews(events);
-        Map<Long, Long> confirmedRequestsMap = eventUtils.getConfirmedRequests(events);
+        Set<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toSet());
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        Map<Long, Long> confirmedRequestsMap = getConfirmedRequests(eventIds);
+        Map<Long, List<CommentDto>> commentsMap = getCommentsMap(eventIds);
 
         List<EventShortDto> dtos = new ArrayList<>();
         for (Event event : events) {
@@ -155,6 +170,7 @@ public class EventServiceImpl implements EventService {
             EventShortDto dto = EventMapper.mapToShortDto(event);
             dto.setConfirmedRequests(requestsCount);
             dto.setViews(viewsMap.getOrDefault(dto.getId(), 0L));
+            dto.setComments(commentsMap.getOrDefault(dto.getId(), Collections.emptyList()));
             dtos.add(dto);
         }
         return dtos;
@@ -163,5 +179,81 @@ public class EventServiceImpl implements EventService {
     private Event getEvent(Long eventId) {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
+    }
+
+    private Map<Long, List<CommentDto>> getCommentsMap(Set<Long> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, List<CommentDto>> commentsMap = new HashMap<>();
+        commentRepository.findAllByEventIdIn(eventIds).forEach(comment -> {
+            commentsMap.computeIfAbsent(comment.getEvent().getId(), eventId -> new ArrayList<>())
+                    .add(commentMapper.mapToCommentDto(comment));
+        });
+        return commentsMap;
+    }
+
+    private Long getEventViews(Event event) {
+        if (event.getPublishedOn() == null) {
+            return 0L;
+        }
+
+        LocalDateTime start = event.getPublishedOn();
+        LocalDateTime end = LocalDateTime.now();
+        List<String> uris = List.of("/events/" + event.getId());
+
+        return statsClient.getStats(start, end, uris, true)
+                .stream()
+                .findFirst()
+                .map(stats -> stats.getHits() != null ? stats.getHits() : 0L)
+                .orElse(0L);
+    }
+
+    private Map<Long, Long> getEventsViews(List<Event> events) {
+        List<String> uris = new ArrayList<>();
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime end = start;
+        for (Event event : events) {
+            uris.add("/events/" + event.getId());
+            if (event.getPublishedOn() != null && start.isAfter(event.getPublishedOn())) {
+                start = event.getPublishedOn();
+            }
+        }
+        if (start.isEqual(end)) {
+            return Collections.emptyMap();
+        }
+
+        List<ViewStatsDto> viewDtos = statsClient.getStats(start, end, uris, true);
+        Map<Long, Long> viewsMap = new HashMap<>();
+        for (ViewStatsDto view : viewDtos) {
+            String[] parts = view.getUri().split("/");
+            if (parts.length == 3) {
+                Long eventId = Long.parseLong(parts[parts.length - 1]);
+                viewsMap.put(eventId, view.getHits());
+            }
+        }
+        return viewsMap;
+    }
+
+    private void setEventFullDtoFields(EventFullDto dto, Event event) {
+        dto.setViews(getEventViews(event));
+        dto.setConfirmedRequests((long) requestRepository.countByEventIdAndStatus(event.getId(), ParticipationRequestStatus.CONFIRMED));
+        dto.setComments(getCommentsDtoList(event.getId()));
+    }
+
+    private List<CommentDto> getCommentsDtoList(Long eventId) {
+        return commentRepository.findByEventId(eventId).stream()
+                .map(commentMapper::mapToCommentDto)
+                .toList();
+    }
+
+    private Map<Long, Long> getConfirmedRequests(Set<Long> eventIds) {
+        return requestRepository.getConfirmedRequestsCount(eventIds, ParticipationRequestStatus.CONFIRMED).stream()
+                .collect(Collectors.toMap(object -> (Long) object[0], object -> (Long) object[1]));
+    }
+
+    private Category getCategory(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Категория с id " + id + " не найдена"));
     }
 }
